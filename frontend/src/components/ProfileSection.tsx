@@ -1,0 +1,313 @@
+import { useState } from 'react';
+import { motion } from 'motion/react';
+import { User, Mail, Lock, LogOut, Save, Award, Leaf } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Avatar, AvatarFallback } from './ui/avatar';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Badge } from './ui/badge';
+import { Progress } from './ui/progress';
+import { toast } from 'sonner';
+
+interface ProfileSectionProps {
+  onLogout: () => void;
+}
+
+export function ProfileSection({ onLogout }: ProfileSectionProps) {
+  const [formData, setFormData] = useState({
+    name: 'João Silva',
+    email: 'joao@email.com',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  const userStats = {
+    level: 'Defensor Verde',
+    points: 1820,
+    nextLevel: 2000,
+    tasksCompleted: 47,
+    friendsCount: 12,
+    daysActive: 23,
+    avatar: '🌱'
+  };
+
+  const achievements = [
+    { id: 1, title: 'Primeira Tarefa', description: 'Complete sua primeira tarefa', icon: '🎯', earned: true },
+    { id: 2, title: 'Eco Iniciante', description: 'Alcance 500 pontos', icon: '🌿', earned: true },
+    { id: 3, title: 'Semana Verde', description: '7 dias consecutivos', icon: '📅', earned: true },
+    { id: 4, title: 'Social', description: 'Adicione 10 amigos', icon: '👥', earned: true },
+    { id: 5, title: 'Eco Master', description: 'Alcance 2000 pontos', icon: '🏆', earned: false },
+    { id: 6, title: 'Mês Sustentável', description: '30 dias consecutivos', icon: '🗓️', earned: false }
+  ];
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast.success('Perfil atualizado com sucesso! 🌿');
+  };
+
+  const handleChangePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.currentPassword || !formData.newPassword || !formData.confirmPassword) {
+      toast.error('Preencha todos os campos de senha');
+      return;
+    }
+    
+    if (formData.newPassword !== formData.confirmPassword) {
+      toast.error('As senhas não coincidem');
+      return;
+    }
+    
+    if (formData.newPassword.length < 6) {
+      toast.error('A senha deve ter no mínimo 6 caracteres');
+      return;
+    }
+    
+    toast.success('Senha alterada com sucesso! 🔒');
+    setFormData({ ...formData, currentPassword: '', newPassword: '', confirmPassword: '' });
+  };
+
+  const progressToNextLevel = (userStats.points / userStats.nextLevel) * 100;
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <h1 className="text-green-800 dark:text-green-300 mb-2">Meu Perfil</h1>
+        <p className="text-gray-600 dark:text-gray-400">Gerencie suas informações e configurações</p>
+      </motion.div>
+
+      {/* Profile overview */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <Card className="border-green-200 dark:border-gray-700">
+          <CardContent className="p-6">
+            <div className="flex flex-col lg:flex-row gap-6">
+              <div className="flex flex-col items-center lg:items-start gap-4">
+                <Avatar className="w-24 h-24 text-4xl">
+                  <AvatarFallback>{userStats.avatar}</AvatarFallback>
+                </Avatar>
+                <div className="text-center lg:text-left">
+                  <h2 className="text-green-800 dark:text-green-300">{formData.name}</h2>
+                  <Badge className="bg-green-500 mt-2">{userStats.level}</Badge>
+                </div>
+              </div>
+              
+              <div className="flex-1 space-y-4">
+                <div>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Progresso para o próximo nível
+                    </span>
+                    <span className="text-sm text-green-600 dark:text-green-400">
+                      {userStats.points} / {userStats.nextLevel} pts
+                    </span>
+                  </div>
+                  <Progress value={progressToNextLevel} />
+                </div>
+
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="text-center p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
+                    <div className="text-green-600 dark:text-green-400">{userStats.points}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Pontos</div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                    <div className="text-blue-600 dark:text-blue-400">{userStats.tasksCompleted}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Tarefas</div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20">
+                    <div className="text-purple-600 dark:text-purple-400">{userStats.friendsCount}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Amigos</div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20">
+                    <div className="text-orange-600 dark:text-orange-400">{userStats.daysActive}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Dias ativos</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Achievements */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <Card className="border-green-200 dark:border-gray-700">
+          <CardHeader>
+            <CardTitle className="dark:text-gray-200">Conquistas</CardTitle>
+            <CardDescription className="dark:text-gray-400">
+              {achievements.filter(a => a.earned).length} de {achievements.length} conquistadas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {achievements.map((achievement) => (
+                <div
+                  key={achievement.id}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    achievement.earned
+                      ? 'border-green-400 dark:border-green-600 bg-green-50 dark:bg-green-900/20'
+                      : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 opacity-50'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">{achievement.icon}</div>
+                  <div className="dark:text-gray-200">{achievement.title}</div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{achievement.description}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Edit profile */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <Card className="border-green-200 dark:border-gray-700">
+          <CardHeader>
+            <CardTitle className="dark:text-gray-200">Editar Perfil</CardTitle>
+            <CardDescription className="dark:text-gray-400">Atualize suas informações pessoais</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="dark:text-gray-200">Nome</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="pl-10 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email" className="dark:text-gray-200">E-mail</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="pl-10 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+              </div>
+              
+              <Button type="submit" className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white">
+                <Save size={20} className="mr-2" />
+                Salvar Alterações
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Change password */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <Card className="border-green-200 dark:border-gray-700">
+          <CardHeader>
+            <CardTitle className="dark:text-gray-200">Alterar Senha</CardTitle>
+            <CardDescription className="dark:text-gray-400">Mantenha sua conta segura</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword" className="dark:text-gray-200">Senha Atual</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    value={formData.currentPassword}
+                    onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
+                    className="pl-10 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="newPassword" className="dark:text-gray-200">Nova Senha</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={formData.newPassword}
+                    onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+                    className="pl-10 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="dark:text-gray-200">Confirmar Nova Senha</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    className="pl-10 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+              </div>
+              
+              <Button type="submit" className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white">
+                <Lock size={20} className="mr-2" />
+                Alterar Senha
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Logout */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
+        <Card className="border-red-200 dark:border-red-900/50">
+          <CardContent className="p-6">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+              <div>
+                <h3 className="text-red-600 dark:text-red-400">Sair da Conta</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Desconectar-se do EcoChat</p>
+              </div>
+              <Button
+                onClick={onLogout}
+                variant="outline"
+                className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/20"
+              >
+                <LogOut size={20} className="mr-2" />
+                Sair
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
+  );
+}
