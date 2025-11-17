@@ -33,17 +33,23 @@ export function ChatArea() {
     scrollToBottom();
   }, [messages]);
 
-  const botResponses = [
-    'Que ótima pergunta! 🌱 A reciclagem é essencial para reduzir o desperdício.',
-    'Posso te ajudar com isso! 💚 Vamos começar com pequenas mudanças diárias.',
-    'Excelente iniciativa! 🌍 Cada ação conta para um futuro sustentável.',
-    'Fico feliz em ajudar! ♻️ Juntos podemos fazer a diferença.',
-    'Interessante! 🌿 Você sabia que pequenas ações têm grande impacto?',
-    'Muito bem! 🌳 Continue assim, você está no caminho certo.',
-    'Ótimo ponto! 🍃 A conscientização é o primeiro passo.'
-  ];
+  const sendMessageToBackend = async (message: string) => {
+    try {
+      const res = await fetch("http://127.0.0.1:5000/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+      });
 
-  const handleSend = () => {
+      const data = await res.json();
+      return data.response; // backend retorna { "response": "texto" }
+    } catch (error) {
+      console.error("Erro ao conectar ao backend:", error);
+      return "Desculpe, não consegui conectar ao servidor. 😕";
+    }
+  };
+
+  const handleSend = async () => {
     if (!inputValue.trim()) return;
 
     const userMessage: Message = {
@@ -53,19 +59,21 @@ export function ChatArea() {
       timestamp: new Date()
     };
 
-    setMessages([...messages, userMessage]);
+    setMessages(prev => [...prev, userMessage]);
+
+    const userInput = inputValue;
     setInputValue('');
 
-    // Simulate bot response
-    setTimeout(() => {
-      const botMessage: Message = {
-        id: messages.length + 2,
-        text: botResponses[Math.floor(Math.random() * botResponses.length)],
-        sender: 'bot',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, botMessage]);
-    }, 1000);
+    const botText = await sendMessageToBackend(userInput);
+
+    const botMessage: Message = {
+      id: messages.length + 2,
+      text: botText,
+      sender: 'bot',
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, botMessage]);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -77,6 +85,7 @@ export function ChatArea() {
   return (
     <div className="max-w-5xl mx-auto h-[calc(100vh-4rem)]">
       <Card className="h-full flex flex-col bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-green-200 dark:border-gray-700">
+        
         {/* Header */}
         <div className="p-4 lg:p-6 border-b border-green-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
@@ -99,21 +108,25 @@ export function ChatArea() {
               key={message.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05 }}
               className={`flex gap-3 ${message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
             >
-              <Avatar className={message.sender === 'bot' 
-                ? 'bg-gradient-to-br from-green-400 to-emerald-500' 
-                : 'bg-gradient-to-br from-blue-400 to-indigo-500'
+              <Avatar className={
+                message.sender === 'bot'
+                  ? 'bg-gradient-to-br from-green-400 to-emerald-500'
+                  : 'bg-gradient-to-br from-blue-400 to-indigo-500'
               }>
                 <AvatarFallback>
-                  {message.sender === 'bot' ? <Bot className="text-white" size={20} /> : <User className="text-white" size={20} />}
+                  {message.sender === 'bot'
+                    ? <Bot className="text-white" size={20} />
+                    : <User className="text-white" size={20} />}
                 </AvatarFallback>
               </Avatar>
-              <div className={`max-w-[70%] ${message.sender === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
+
+              <div className={`max-w-[70%] flex flex-col ${message.sender === 'user' ? 'items-end' : 'items-start'}`}>
                 <div className={`p-3 lg:p-4 rounded-2xl ${
-                  message.sender === 'bot' 
-                    ? 'bg-green-100 dark:bg-green-900/30 text-gray-800 dark:text-gray-200' 
+                  message.sender === 'bot'
+                    ? 'bg-green-100 dark:bg-green-900/30 text-gray-800 dark:text-gray-200'
                     : 'bg-blue-500 text-white'
                 }`}>
                   <p>{message.text}</p>
@@ -124,6 +137,7 @@ export function ChatArea() {
               </div>
             </motion.div>
           ))}
+
           <div ref={messagesEndRef} />
         </div>
 
@@ -145,6 +159,7 @@ export function ChatArea() {
             </Button>
           </div>
         </div>
+
       </Card>
     </div>
   );

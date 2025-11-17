@@ -13,14 +13,11 @@ CORS(app, supports_credentials=True)
 # -------------------------------
 # Configurações de segurança
 # -------------------------------
-# Chave secreta para sessões (pode ser aleatória)
 app.config['SECRET_KEY'] = os.urandom(24)
 
 # Caminho absoluto do banco de dados
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(basedir, 'ecochat.db')}"
-
-# Desativa warnings de modificações de objetos
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # -------------------------------
@@ -41,10 +38,8 @@ class Usuario(db.Model):
 # -------------------------------
 def inicializar_db():
     with app.app_context():
-        # Cria as tabelas do banco
         db.create_all()
 
-        # Verifica se o usuário padrão já existe
         usuario_padrao = Usuario.query.filter_by(email='teste@eco.com').first()
         if not usuario_padrao:
             novo_usuario = Usuario(
@@ -55,7 +50,22 @@ def inicializar_db():
             db.session.commit()
             print("✅ Usuário padrão criado: teste@eco.com / 123456")
         else:
-            print("✅ Usuário padrão já existe no banco de dados")
+            print("✅ Usuário padrão já existe.")
+
+# -------------------------------
+# Rota inicial (resolver erro Not Found)
+# -------------------------------
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({
+        "mensagem": "🌱 EcoChat API está ativa!",
+        "rotas_disponiveis": [
+            "/api/login",
+            "/api/register",
+            "/api/chat",
+            "/api/status"
+        ]
+    })
 
 # -------------------------------
 # Rotas da API
@@ -86,6 +96,7 @@ def register():
     novo_usuario = Usuario(email=email, senha=generate_password_hash(senha))
     db.session.add(novo_usuario)
     db.session.commit()
+
     return jsonify({"sucesso": True, "mensagem": "Conta criada com sucesso!"})
 
 @app.route('/api/chat', methods=['POST'])
@@ -111,13 +122,16 @@ def chat():
 
 @app.route('/api/status', methods=['GET'])
 def status():
-    return jsonify({"status": "ok", "usuarios_cadastrados": Usuario.query.count()})
+    return jsonify({
+        "status": "ok",
+        "usuarios_cadastrados": Usuario.query.count()
+    })
 
 # -------------------------------
 # Inicializa servidor
 # -------------------------------
 if __name__ == '__main__':
     inicializar_db()
-    print("\n🌱 EcoChat Backend atualizado e rodando!")
+    print("\n🌱 EcoChat Backend rodando!")
     print("📍 Acesse: http://127.0.0.1:5000")
     app.run(debug=True, host='127.0.0.1', port=5000)

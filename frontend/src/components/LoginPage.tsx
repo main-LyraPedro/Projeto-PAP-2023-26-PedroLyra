@@ -25,41 +25,78 @@ export function LoginPage({ onLogin, isDarkMode, toggleTheme }: LoginPageProps) 
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
-    
+
     if (!isLogin && !formData.name.trim()) {
       newErrors.name = 'Nome é obrigatório';
     }
-    
+
     if (!formData.email.trim()) {
       newErrors.email = 'E-mail é obrigatório';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'E-mail inválido';
     }
-    
+
     if (!formData.password) {
       newErrors.password = 'Senha é obrigatória';
     } else if (formData.password.length < 6) {
       newErrors.password = 'Senha deve ter no mínimo 6 caracteres';
     }
-    
+
     if (!isLogin && formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'As senhas não coincidem';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (validate()) {
+    if (!validate()) return;
+
+    try {
       if (isLogin) {
-        toast.success('Login realizado com sucesso! 🌿');
+        const res = await fetch("http://127.0.0.1:5000/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: formData.email,
+            senha: formData.password
+          })
+        });
+
+        const data = await res.json();
+
+        if (data.sucesso) {
+          toast.success("Login realizado com sucesso! 🌿");
+          setTimeout(() => onLogin(), 800);
+        } else {
+          toast.error(data.mensagem);
+        }
+
       } else {
-        toast.success('Conta criada com sucesso! 🌱');
+        const res = await fetch("http://127.0.0.1:5000/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: formData.email,
+            senha: formData.password
+          })
+        });
+
+        const data = await res.json();
+
+        if (data.sucesso) {
+          toast.success("Conta criada com sucesso! 🌱");
+          setTimeout(() => onLogin(), 800);
+        } else {
+          toast.error(data.mensagem);
+        }
       }
-      setTimeout(() => onLogin(), 1000);
+
+    } catch (err) {
+      toast.error("Erro ao conectar ao servidor.");
+      console.error(err);
     }
   };
 
@@ -72,16 +109,15 @@ export function LoginPage({ onLogin, isDarkMode, toggleTheme }: LoginPageProps) 
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Floating background icons */}
       {floatingIcons.map(({ Icon, delay, x, y }, index) => (
         <motion.div
           key={index}
           className="absolute text-green-200/20 dark:text-green-700/20"
           style={{ left: x, top: y }}
           initial={{ opacity: 0, scale: 0, rotate: 0 }}
-          animate={{ 
-            opacity: 1, 
-            scale: 1, 
+          animate={{
+            opacity: 1,
+            scale: 1,
             rotate: 360,
             y: [0, -20, 0]
           }}
@@ -104,18 +140,13 @@ export function LoginPage({ onLogin, isDarkMode, toggleTheme }: LoginPageProps) 
         </motion.div>
       ))}
 
-      {/* Theme toggle */}
       <motion.button
         onClick={toggleTheme}
         className="absolute top-6 right-6 p-3 rounded-full bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
       >
-        {isDarkMode ? (
-          <Sun className="text-yellow-500" size={24} />
-        ) : (
-          <Moon className="text-indigo-600" size={24} />
-        )}
+        {isDarkMode ? <Sun className="text-yellow-500" size={24} /> : <Moon className="text-indigo-600" size={24} />}
       </motion.button>
 
       <motion.div
@@ -144,6 +175,7 @@ export function LoginPage({ onLogin, isDarkMode, toggleTheme }: LoginPageProps) 
               Seu assistente inteligente para sustentabilidade 🌍
             </CardDescription>
           </CardHeader>
+
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
@@ -153,113 +185,72 @@ export function LoginPage({ onLogin, isDarkMode, toggleTheme }: LoginPageProps) 
                   exit={{ opacity: 0, height: 0 }}
                   className="space-y-2"
                 >
-                  <Label htmlFor="name" className="dark:text-gray-200">Nome</Label>
+                  <Label htmlFor="name">Nome</Label>
                   <Input
                     id="name"
                     placeholder="Seu nome"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
                   {errors.name && (
-                    <motion.p
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="text-red-500 text-sm"
-                    >
-                      {errors.name}
-                    </motion.p>
+                    <p className="text-red-500 text-sm">{errors.name}</p>
                   )}
                 </motion.div>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="dark:text-gray-200">E-mail</Label>
+                <Label>E-mail</Label>
                 <Input
-                  id="email"
                   type="email"
                   placeholder="seu@email.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
-                {errors.email && (
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-red-500 text-sm"
-                  >
-                    {errors.email}
-                  </motion.p>
-                )}
+                {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="dark:text-gray-200">Senha</Label>
+                <Label>Senha</Label>
                 <Input
-                  id="password"
                   type="password"
                   placeholder="••••••"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
-                {errors.password && (
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-red-500 text-sm"
-                  >
-                    {errors.password}
-                  </motion.p>
-                )}
+                {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
               </div>
 
               {!isLogin && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-2"
-                >
-                  <Label htmlFor="confirmPassword" className="dark:text-gray-200">Confirmar Senha</Label>
+                <div className="space-y-2">
+                  <Label>Confirmar Senha</Label>
                   <Input
-                    id="confirmPassword"
                     type="password"
                     placeholder="••••••"
                     value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                    className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    onChange={(e) =>
+                      setFormData({ ...formData, confirmPassword: e.target.value })
+                    }
                   />
                   {errors.confirmPassword && (
-                    <motion.p
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="text-red-500 text-sm"
-                    >
-                      {errors.confirmPassword}
-                    </motion.p>
+                    <p className="text-red-500 text-sm">{errors.confirmPassword}</p>
                   )}
-                </motion.div>
+                </div>
               )}
 
-              <Button
-                type="submit"
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
-              >
+              <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
                 {isLogin ? 'Entrar' : 'Criar Conta'}
               </Button>
 
               <div className="text-center">
                 <button
                   type="button"
+                  className="text-green-600 hover:underline"
                   onClick={() => {
                     setIsLogin(!isLogin);
                     setErrors({});
                   }}
-                  className="text-green-600 dark:text-green-400 hover:underline"
                 >
-                  {isLogin ? 'Não tem uma conta? Criar conta' : 'Já tem uma conta? Entrar'}
+                  {isLogin ? 'Não tem conta? Criar' : 'Já tem conta? Entrar'}
                 </button>
               </div>
             </form>
