@@ -12,11 +12,12 @@ interface ChatPageProps {
   onLogout: () => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
+  userId: number; // 🔥 RECEBE O ID DO USUÁRIO DO APP.TSX
 }
 
 type Section = 'chat' | 'ranking' | 'tasks' | 'friends' | 'profile';
 
-export function ChatPage({ onLogout, isDarkMode, toggleTheme }: ChatPageProps) {
+export function ChatPage({ onLogout, isDarkMode, toggleTheme, userId }: ChatPageProps) {
   const [activeSection, setActiveSection] = useState<Section>('chat');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -29,7 +30,7 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme }: ChatPageProps) {
       case 'tasks':
         return <TasksSection />;
       case 'friends':
-        return <FriendsSection />;
+        return <FriendsSection userId={userId} />; {/* 🔥 PASSA O userId PARA FRIENDSSECTION */}
       case 'profile':
         return <ProfileSection onLogout={onLogout} />;
       default:
@@ -39,7 +40,7 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme }: ChatPageProps) {
 
   return (
     <div className="min-h-screen flex relative">
-      {/* Mobile menu toggle */}
+      {/* Botão de menu mobile */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white dark:bg-gray-800 shadow-lg"
@@ -47,7 +48,7 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme }: ChatPageProps) {
         {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
-      {/* Theme toggle */}
+      {/* Botão de tema */}
       <motion.button
         onClick={toggleTheme}
         className="fixed top-4 right-4 z-50 p-3 rounded-full bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all"
@@ -61,12 +62,12 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme }: ChatPageProps) {
         )}
       </motion.button>
 
-      {/* Sidebar for desktop */}
+      {/* Sidebar para desktop */}
       <div className="hidden lg:block">
         <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} />
       </div>
 
-      {/* Mobile sidebar */}
+      {/* Sidebar mobile com overlay */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
@@ -96,7 +97,7 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme }: ChatPageProps) {
         )}
       </AnimatePresence>
 
-      {/* Main content */}
+      {/* Conteúdo principal */}
       <div className="flex-1 p-4 lg:p-8">
         <motion.div
           key={activeSection}

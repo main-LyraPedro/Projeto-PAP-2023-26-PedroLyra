@@ -8,7 +8,7 @@ import { Leaf, Sun, Moon, Sprout, Globe, Recycle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface LoginPageProps {
-  onLogin: () => void;
+  onLogin: (userData: { user_id: number; email: string }) => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
 }
@@ -22,6 +22,7 @@ export function LoginPage({ onLogin, isDarkMode, toggleTheme }: LoginPageProps) 
     confirmPassword: ''
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
@@ -32,7 +33,7 @@ export function LoginPage({ onLogin, isDarkMode, toggleTheme }: LoginPageProps) 
 
     if (!formData.email.trim()) {
       newErrors.email = 'E-mail é obrigatório';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'E-mail inválido';
     }
 
@@ -50,12 +51,16 @@ export function LoginPage({ onLogin, isDarkMode, toggleTheme }: LoginPageProps) 
     return Object.keys(newErrors).length === 0;
   };
 
+  // 🔥 SUBMIT - LOGIN E REGISTRO COM BACKEND
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
+    setIsLoading(true);
+
     try {
       if (isLogin) {
+        // 🔥 LOGIN
         const res = await fetch("http://127.0.0.1:5000/api/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -67,18 +72,34 @@ export function LoginPage({ onLogin, isDarkMode, toggleTheme }: LoginPageProps) 
 
         const data = await res.json();
 
-        if (data.sucesso) {
+        if (res.ok && data.sucesso) {
+          // Backend retorna: { sucesso: true, user: { id, nome, email } }
+          const userId = data.user.id;
+          
+          // Salvar no localStorage
+          localStorage.setItem("user_id", String(userId));
+          localStorage.setItem("user_email", formData.email);
+
           toast.success("Login realizado com sucesso! 🌿");
-          setTimeout(() => onLogin(), 800);
+
+          // Passar dados para o App.tsx
+          setTimeout(() => {
+            onLogin({ 
+              user_id: userId, 
+              email: formData.email 
+            });
+          }, 500);
         } else {
-          toast.error(data.mensagem);
+          toast.error(data.mensagem || "Email ou senha inválidos");
         }
 
       } else {
+        // 🔥 REGISTRO
         const res = await fetch("http://127.0.0.1:5000/api/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            nome: formData.name,
             email: formData.email,
             senha: formData.password
           })
@@ -86,17 +107,43 @@ export function LoginPage({ onLogin, isDarkMode, toggleTheme }: LoginPageProps) 
 
         const data = await res.json();
 
-        if (data.sucesso) {
+        if (res.ok && data.sucesso) {
           toast.success("Conta criada com sucesso! 🌱");
-          setTimeout(() => onLogin(), 800);
+          
+          // Após criar conta, fazer login automático
+          setTimeout(async () => {
+            const loginRes = await fetch("http://127.0.0.1:5000/api/login", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: formData.email,
+                senha: formData.password
+              })
+            });
+
+            const loginData = await loginRes.json();
+            
+            if (loginRes.ok && loginData.sucesso) {
+              const userId = loginData.user.id;
+              localStorage.setItem("user_id", String(userId));
+              localStorage.setItem("user_email", formData.email);
+              
+              onLogin({ 
+                user_id: userId, 
+                email: formData.email 
+              });
+            }
+          }, 1000);
         } else {
-          toast.error(data.mensagem);
+          toast.error(data.mensagem || "Erro ao criar conta");
         }
       }
 
     } catch (err) {
-      toast.error("Erro ao conectar ao servidor.");
-      console.error(err);
+      console.error("Erro ao conectar ao servidor:", err);
+      toast.error("Erro ao conectar ao servidor. Verifique se o backend está rodando.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -109,6 +156,7 @@ export function LoginPage({ onLogin, isDarkMode, toggleTheme }: LoginPageProps) 
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Ícones flutuantes de fundo */}
       {floatingIcons.map(({ Icon, delay, x, y }, index) => (
         <motion.div
           key={index}
@@ -140,15 +188,21 @@ export function LoginPage({ onLogin, isDarkMode, toggleTheme }: LoginPageProps) 
         </motion.div>
       ))}
 
+      {/* Botão de tema */}
       <motion.button
         onClick={toggleTheme}
         className="absolute top-6 right-6 p-3 rounded-full bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
       >
-        {isDarkMode ? <Sun className="text-yellow-500" size={24} /> : <Moon className="text-indigo-600" size={24} />}
+        {isDarkMode ? (
+          <Sun className="text-yellow-500" size={24} />
+        ) : (
+          <Moon className="text-indigo-600" size={24} />
+        )}
       </motion.button>
 
+      {/* Card de Login/Registro */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -178,79 +232,143 @@ export function LoginPage({ onLogin, isDarkMode, toggleTheme }: LoginPageProps) 
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              
+              {/* Campo Nome (só no registro) */}
               {!isLogin && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
                   className="space-y-2"
                 >
-                  <Label htmlFor="name">Nome</Label>
+                  <Label htmlFor="name" className="dark:text-gray-200">Nome</Label>
                   <Input
                     id="name"
                     placeholder="Seu nome"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    disabled={isLoading}
+                    className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
                   {errors.name && (
-                    <p className="text-red-500 text-sm">{errors.name}</p>
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-red-500 text-sm"
+                    >
+                      {errors.name}
+                    </motion.p>
                   )}
                 </motion.div>
               )}
 
+              {/* Campo Email */}
               <div className="space-y-2">
-                <Label>E-mail</Label>
+                <Label htmlFor="email" className="dark:text-gray-200">E-mail</Label>
                 <Input
+                  id="email"
                   type="email"
-                  placeholder="seu@email.com"
+                  placeholder="email@exemplo.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  disabled={isLoading}
+                  className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
-                {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+                {errors.email && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-red-500 text-sm"
+                  >
+                    {errors.email}
+                  </motion.p>
+                )}
               </div>
 
+              {/* Campo Senha */}
               <div className="space-y-2">
-                <Label>Senha</Label>
+                <Label htmlFor="password" className="dark:text-gray-200">Senha</Label>
                 <Input
+                  id="password"
                   type="password"
                   placeholder="••••••"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  disabled={isLoading}
+                  className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
-                {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
+                {errors.password && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-red-500 text-sm"
+                  >
+                    {errors.password}
+                  </motion.p>
+                )}
               </div>
 
+              {/* Campo Confirmar Senha (só no registro) */}
               {!isLogin && (
-                <div className="space-y-2">
-                  <Label>Confirmar Senha</Label>
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="space-y-2"
+                >
+                  <Label htmlFor="confirmPassword" className="dark:text-gray-200">
+                    Confirmar Senha
+                  </Label>
                   <Input
+                    id="confirmPassword"
                     type="password"
                     placeholder="••••••"
                     value={formData.confirmPassword}
-                    onChange={(e) =>
-                      setFormData({ ...formData, confirmPassword: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    disabled={isLoading}
+                    className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
                   {errors.confirmPassword && (
-                    <p className="text-red-500 text-sm">{errors.confirmPassword}</p>
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-red-500 text-sm"
+                    >
+                      {errors.confirmPassword}
+                    </motion.p>
                   )}
-                </div>
+                </motion.div>
               )}
 
-              <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
-                {isLogin ? 'Entrar' : 'Criar Conta'}
+              {/* Botão Submit */}
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2 justify-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    {isLogin ? 'Entrando...' : 'Criando conta...'}
+                  </span>
+                ) : (
+                  isLogin ? 'Entrar' : 'Criar Conta'
+                )}
               </Button>
 
+              {/* Toggle Login/Registro */}
               <div className="text-center">
                 <button
                   type="button"
-                  className="text-green-600 hover:underline"
                   onClick={() => {
                     setIsLogin(!isLogin);
                     setErrors({});
                   }}
+                  disabled={isLoading}
+                  className="text-green-600 dark:text-green-400 hover:underline disabled:opacity-50"
                 >
-                  {isLogin ? 'Não tem conta? Criar' : 'Já tem conta? Entrar'}
+                  {isLogin 
+                    ? 'Não tem uma conta? Criar conta' 
+                    : 'Já tem uma conta? Entrar'
+                  }
                 </button>
               </div>
             </form>
