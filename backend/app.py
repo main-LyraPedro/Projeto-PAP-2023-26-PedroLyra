@@ -52,6 +52,26 @@ class UserStats(db.Model):
     ultimo_acesso = db.Column(db.DateTime, default=db.func.current_timestamp())
 
 # -------------------------------
+# MODELO: Tarefa (tarefas disponíveis)
+# -------------------------------
+class Tarefa(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    titulo = db.Column(db.String(200), nullable=False)
+    descricao = db.Column(db.String(500))
+    pontos = db.Column(db.Integer, default=10)
+    categoria = db.Column(db.String(20), default="daily")  # daily, weekly, monthly
+    icone = db.Column(db.String(50), default="Leaf")
+
+# -------------------------------
+# MODELO: TarefaUsuario (tarefas completadas)
+# -------------------------------
+class TarefaUsuario(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("usuario.id"), nullable=False)
+    tarefa_id = db.Column(db.Integer, db.ForeignKey("tarefa.id"), nullable=False)
+    completada_em = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+# -------------------------------
 # Inicialização do banco
 # -------------------------------
 def inicializar_db():
@@ -93,6 +113,32 @@ def inicializar_db():
                 db.session.add(stats)
         
         db.session.commit()
+        
+        # 🔥 Criar tarefas padrão
+        if Tarefa.query.count() == 0:
+            tarefas_padrao = [
+                # DIÁRIAS
+                {"titulo": "Separar lixo reciclável", "descricao": "Separe plástico, papel e vidro", "pontos": 10, "categoria": "daily", "icone": "Recycle"},
+                {"titulo": "Economizar água", "descricao": "Tome um banho de 5 minutos", "pontos": 15, "categoria": "daily", "icone": "Droplet"},
+                {"titulo": "Apagar luzes", "descricao": "Desligue luzes ao sair do ambiente", "pontos": 5, "categoria": "daily", "icone": "Zap"},
+                
+                # SEMANAIS
+                {"titulo": "Usar sacola reutilizável", "descricao": "Vá às compras com sua própria sacola", "pontos": 20, "categoria": "weekly", "icone": "Leaf"},
+                {"titulo": "Plantar uma árvore", "descricao": "Contribua com o reflorestamento", "pontos": 50, "categoria": "weekly", "icone": "Leaf"},
+                {"titulo": "Reduzir consumo de carne", "descricao": "Faça 3 refeições vegetarianas", "pontos": 30, "categoria": "weekly", "icone": "Leaf"},
+                
+                # MENSAIS
+                {"titulo": "Limpar uma área pública", "descricao": "Organize ou participe de mutirão", "pontos": 100, "categoria": "monthly", "icone": "Recycle"},
+                {"titulo": "Educar 5 pessoas", "descricao": "Compartilhe dicas de sustentabilidade", "pontos": 75, "categoria": "monthly", "icone": "Leaf"},
+            ]
+            
+            for tarefa_data in tarefas_padrao:
+                tarefa = Tarefa(**tarefa_data)
+                db.session.add(tarefa)
+            
+            db.session.commit()
+            print("✅ Tarefas padrão criadas!")
+        
         print("✅ Usuários e estatísticas criados!")
 
 
@@ -109,7 +155,8 @@ def home():
             "/api/chat",
             "/api/status",
             "/api/friends/*",
-            "/api/profile/<user_id>"
+            "/api/profile/<user_id>",
+            "/api/tasks/*"
         ]
     })
 
@@ -329,6 +376,167 @@ def change_password():
     return jsonify({
         "sucesso": True,
         "mensagem": "Senha alterada com sucesso!"
+    })
+
+
+# ======================================================
+# ==================== SISTEMA DE TAREFAS ==============
+# ======================================================
+
+# -------------------------------
+# ROTA: Listar todas as tarefas
+# -------------------------------
+@app.route('/api/tasks', methods=['GET'])
+def get_tasks():
+    """Retorna todas as tarefas disponíveis"""
+    tarefas = Tarefa.query.all()
+    
+    return jsonify([{
+        "id": t.id,
+        "titulo": t.titulo,
+        "descricao": t.descricao,
+        "pontos": t.pontos,
+        "categoria": t.categoria,
+        "icone": t.icone
+    } for t in tarefas])
+
+
+# -------------------------------
+# ROTA: Buscar tarefas do usuário
+# -------------------------------
+@app.route('/api/tasks/user/<int:user_id>', methods=['GET'])
+def get_user_tasks(user_id):
+    """Retorna tarefas do usuário (com status de completada ou não)"""
+    
+    # Buscar todas as tarefas
+    todas_tarefas = Tarefa.query.all()
+    
+    # Buscar tarefas completadas pelo usuário
+    tarefas_completadas = TarefaUsuario.query.filter_by(user_id=user_id).all()
+    tarefas_completadas_ids = [tc.tarefa_id for tc in tarefas_completadas]
+    
+    resultado = []
+    for tarefa in todas_tarefas:
+        resultado.append({
+            "id": tarefa.id,
+            "titulo": tarefa.titulo,
+            "descricao": tarefa.descricao,
+            "pontos": tarefa.pontos,
+            "categoria": tarefa.categoria,
+            "icone": tarefa.icone,
+            "completada": tarefa.id in tarefas_completadas_ids
+        })
+    
+    return jsonify(resultado)
+
+
+# -------------------------------
+# ROTA: Completar tarefa
+# -------------------------------
+@app.route('/api/tasks/complete', methods=['POST'])
+def complete_task():
+    """Marca uma tarefa como completada e adiciona pontos"""
+    data = request.get_json()
+    user_id = data.get('user_id')
+    tarefa_id = data.get('tarefa_id')
+    
+    if not user_id or not tarefa_id:
+        return jsonify({"erro": "Dados insuficientes"}), 400
+    
+    # Verificar se tarefa existe
+    tarefa = Tarefa.query.get(tarefa_id)
+    if not tarefa:
+        return jsonify({"erro": "Tarefa não encontrada"}), 404
+    
+    # Verificar se já foi completada
+    ja_completada = TarefaUsuario.query.filter_by(
+        user_id=user_id, 
+        tarefa_id=tarefa_id
+    ).first()
+    
+    if ja_completada:
+        return jsonify({"erro": "Tarefa já foi completada"}), 400
+    
+    # Marcar como completada
+    tarefa_usuario = TarefaUsuario(user_id=user_id, tarefa_id=tarefa_id)
+    db.session.add(tarefa_usuario)
+    
+    # Adicionar pontos ao usuário
+    stats = UserStats.query.filter_by(user_id=user_id).first()
+    if stats:
+        stats.pontos += tarefa.pontos
+        stats.tarefas_completas += 1
+        
+        # Atualizar nível baseado nos novos pontos
+        if stats.pontos < 500:
+            stats.nivel = "Eco Iniciante"
+        elif stats.pontos < 1000:
+            stats.nivel = "Guardião Verde"
+        elif stats.pontos < 2000:
+            stats.nivel = "Defensor Verde"
+        else:
+            stats.nivel = "Eco Master"
+    
+    db.session.commit()
+    
+    return jsonify({
+        "sucesso": True,
+        "mensagem": f"Parabéns! +{tarefa.pontos} pontos",
+        "novos_pontos": stats.pontos if stats else 0,
+        "nivel": stats.nivel if stats else "Eco Iniciante"
+    })
+
+
+# -------------------------------
+# ROTA: Desmarcar tarefa (opcional)
+# -------------------------------
+@app.route('/api/tasks/uncomplete', methods=['POST'])
+def uncomplete_task():
+    """Desmarca uma tarefa e remove pontos"""
+    data = request.get_json()
+    user_id = data.get('user_id')
+    tarefa_id = data.get('tarefa_id')
+    
+    if not user_id or not tarefa_id:
+        return jsonify({"erro": "Dados insuficientes"}), 400
+    
+    # Buscar tarefa completada
+    tarefa_usuario = TarefaUsuario.query.filter_by(
+        user_id=user_id, 
+        tarefa_id=tarefa_id
+    ).first()
+    
+    if not tarefa_usuario:
+        return jsonify({"erro": "Tarefa não estava completada"}), 404
+    
+    # Buscar tarefa para pegar pontos
+    tarefa = Tarefa.query.get(tarefa_id)
+    
+    # Remover da lista de completadas
+    db.session.delete(tarefa_usuario)
+    
+    # Remover pontos
+    stats = UserStats.query.filter_by(user_id=user_id).first()
+    if stats and tarefa:
+        stats.pontos = max(0, stats.pontos - tarefa.pontos)
+        stats.tarefas_completas = max(0, stats.tarefas_completas - 1)
+        
+        # Atualizar nível
+        if stats.pontos < 500:
+            stats.nivel = "Eco Iniciante"
+        elif stats.pontos < 1000:
+            stats.nivel = "Guardião Verde"
+        elif stats.pontos < 2000:
+            stats.nivel = "Defensor Verde"
+        else:
+            stats.nivel = "Eco Master"
+    
+    db.session.commit()
+    
+    return jsonify({
+        "sucesso": True,
+        "mensagem": "Tarefa desmarcada",
+        "novos_pontos": stats.pontos if stats else 0
     })
 
 

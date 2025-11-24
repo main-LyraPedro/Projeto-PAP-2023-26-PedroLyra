@@ -22,21 +22,21 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme, userId }: ChatPage
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const renderSection = () => {
-    switch (activeSection) {
-      case 'chat':
-        return <ChatArea />;
-      case 'ranking':
-        return <RankingSection />;
-      case 'tasks':
-        return <TasksSection />;
-      case 'friends':
-        return <FriendsSection userId={userId} />; {/* 🔥 PASSA O userId PARA FRIENDSSECTION */}
-      case 'profile':
-        return <ProfileSection onLogout={onLogout} userId={userId} />
-      default:
-        return <ChatArea />;
-    }
-  };
+  switch (activeSection) {
+    case 'chat':
+      return <ChatArea />;
+    case 'ranking':
+      return <RankingSection />;
+    case 'tasks':
+      return <TasksSection userId={userId} />; {/* 🔥 ADICIONAR userId AQUI */}
+    case 'friends':
+      return <FriendsSection userId={userId} />;
+    case 'profile':
+      return <ProfileSection onLogout={onLogout} userId={userId} />;
+    default:
+      return <ChatArea />;
+  }
+};
 
   return (
     <div className="min-h-screen flex relative">
