@@ -711,6 +711,44 @@ def remover_amigo():
     return jsonify({"sucesso": True, "mensagem": "Amigo removido"})
 
 
+# ======================================================
+# ==================== SISTEMA DE RANKING ==============
+# ======================================================
+
+# -------------------------------
+# ROTA: Ranking Global
+# -------------------------------
+@app.route('/api/ranking', methods=['GET'])
+def get_ranking():
+    """Retorna o ranking de todos os usuários ordenados por pontos"""
+    
+    # Buscar todos os usuários com suas estatísticas
+    usuarios = Usuario.query.all()
+    
+    ranking = []
+    for usuario in usuarios:
+        # Buscar stats do usuário
+        stats = UserStats.query.filter_by(user_id=usuario.id).first()
+        
+        if stats:
+            ranking.append({
+                "id": usuario.id,
+                "nome": usuario.nome,
+                "pontos": stats.pontos,
+                "nivel": stats.nivel,
+                "tarefas_completas": stats.tarefas_completas
+            })
+    
+    # Ordenar por pontos (maior para menor)
+    ranking.sort(key=lambda x: x['pontos'], reverse=True)
+    
+    # Adicionar posição no ranking
+    for i, user in enumerate(ranking):
+        user['posicao'] = i + 1
+    
+    return jsonify(ranking)
+
+
 # -------------------------------
 # RODAR SERVIDOR
 # -------------------------------

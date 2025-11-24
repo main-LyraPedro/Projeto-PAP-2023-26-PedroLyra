@@ -26,7 +26,7 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme, userId }: ChatPage
     case 'chat':
       return <ChatArea />;
     case 'ranking':
-      return <RankingSection />;
+  return <RankingSection userId={userId} />; {/* 🔥 ADICIONAR userId */}
     case 'tasks':
       return <TasksSection userId={userId} />; {/* 🔥 ADICIONAR userId AQUI */}
     case 'friends':
