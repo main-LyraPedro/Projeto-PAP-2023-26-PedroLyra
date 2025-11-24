@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { User, Mail, Lock, LogOut, Save, Award, Leaf } from 'lucide-react';
+import { User, Mail, Lock, LogOut, Save } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Button } from './ui/button';
@@ -12,42 +12,112 @@ import { toast } from 'sonner';
 
 interface ProfileSectionProps {
   onLogout: () => void;
+  userId: number;
 }
 
-export function ProfileSection({ onLogout }: ProfileSectionProps) {
+export function ProfileSection({ onLogout, userId }: ProfileSectionProps) {
   const [formData, setFormData] = useState({
-    name: 'João Silva',
-    email: 'joao@email.com',
+    name: '',
+    email: '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
 
-  const userStats = {
-    level: 'Defensor Verde',
-    points: 1820,
+  const [userStats, setUserStats] = useState({
+    level: 'Carregando...',
+    points: 0,
     nextLevel: 2000,
-    tasksCompleted: 47,
-    friendsCount: 12,
-    daysActive: 23,
+    tasksCompleted: 0,
+    friendsCount: 0,
+    daysActive: 0,
     avatar: '🌱'
-  };
+  });
+
+  const [isLoading, setIsLoading] = useState(true);
 
   const achievements = [
-    { id: 1, title: 'Primeira Tarefa', description: 'Complete sua primeira tarefa', icon: '🎯', earned: true },
-    { id: 2, title: 'Eco Iniciante', description: 'Alcance 500 pontos', icon: '🌿', earned: true },
-    { id: 3, title: 'Semana Verde', description: '7 dias consecutivos', icon: '📅', earned: true },
-    { id: 4, title: 'Social', description: 'Adicione 10 amigos', icon: '👥', earned: true },
-    { id: 5, title: 'Eco Master', description: 'Alcance 2000 pontos', icon: '🏆', earned: false },
-    { id: 6, title: 'Mês Sustentável', description: '30 dias consecutivos', icon: '🗓️', earned: false }
+    { id: 1, title: 'Primeira Tarefa', description: 'Complete sua primeira tarefa', icon: '🎯', earned: userStats.tasksCompleted > 0 },
+    { id: 2, title: 'Eco Iniciante', description: 'Alcance 500 pontos', icon: '🌿', earned: userStats.points >= 500 },
+    { id: 3, title: 'Semana Verde', description: '7 dias consecutivos', icon: '📅', earned: userStats.daysActive >= 7 },
+    { id: 4, title: 'Social', description: 'Adicione 10 amigos', icon: '👥', earned: userStats.friendsCount >= 10 },
+    { id: 5, title: 'Eco Master', description: 'Alcance 2000 pontos', icon: '🏆', earned: userStats.points >= 2000 },
+    { id: 6, title: 'Mês Sustentável', description: '30 dias consecutivos', icon: '🗓️', earned: userStats.daysActive >= 30 }
   ];
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  // 🔥 BUSCAR DADOS DO PERFIL AO CARREGAR
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch(`http://127.0.0.1:5000/api/profile/${userId}`);
+        const data = await res.json();
+
+        if (res.ok) {
+          setFormData({
+            name: data.nome,
+            email: data.email,
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: ''
+          });
+
+          setUserStats({
+            level: data.nivel,
+            points: data.pontos,
+            nextLevel: data.proximo_nivel,
+            tasksCompleted: data.tarefas_completas,
+            friendsCount: data.amigos_count,
+            daysActive: data.dias_ativos,
+            avatar: '🌱'
+          });
+        } else {
+          toast.error('Erro ao carregar perfil');
+        }
+      } catch (err) {
+        console.error('Erro ao buscar perfil:', err);
+        toast.error('Erro ao conectar ao servidor');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [userId]);
+
+  // 🔥 SALVAR ALTERAÇÕES DO PERFIL
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Perfil atualizado com sucesso! 🌿');
+
+    try {
+      const res = await fetch('http://127.0.0.1:5000/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          nome: formData.name,
+          email: formData.email
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        toast.success('Perfil atualizado com sucesso! 🌿');
+        // Atualizar localStorage se mudou email
+        if (formData.email !== localStorage.getItem('user_email')) {
+          localStorage.setItem('user_email', formData.email);
+        }
+      } else {
+        toast.error(data.erro || 'Erro ao atualizar perfil');
+      }
+    } catch (err) {
+      console.error('Erro ao atualizar perfil:', err);
+      toast.error('Erro ao conectar ao servidor');
+    }
   };
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  // 🔥 ALTERAR SENHA
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.currentPassword || !formData.newPassword || !formData.confirmPassword) {
@@ -64,12 +134,41 @@ export function ProfileSection({ onLogout }: ProfileSectionProps) {
       toast.error('A senha deve ter no mínimo 6 caracteres');
       return;
     }
-    
-    toast.success('Senha alterada com sucesso! 🔒');
-    setFormData({ ...formData, currentPassword: '', newPassword: '', confirmPassword: '' });
+
+    try {
+      const res = await fetch('http://127.0.0.1:5000/api/profile/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          senha_atual: formData.currentPassword,
+          senha_nova: formData.newPassword
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        toast.success('Senha alterada com sucesso! 🔒');
+        setFormData({ ...formData, currentPassword: '', newPassword: '', confirmPassword: '' });
+      } else {
+        toast.error(data.erro || 'Erro ao alterar senha');
+      }
+    } catch (err) {
+      console.error('Erro ao alterar senha:', err);
+      toast.error('Erro ao conectar ao servidor');
+    }
   };
 
   const progressToNextLevel = (userStats.points / userStats.nextLevel) * 100;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">

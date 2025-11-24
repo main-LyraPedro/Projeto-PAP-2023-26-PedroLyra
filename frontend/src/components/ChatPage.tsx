@@ -32,7 +32,7 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme, userId }: ChatPage
       case 'friends':
         return <FriendsSection userId={userId} />; {/* 🔥 PASSA O userId PARA FRIENDSSECTION */}
       case 'profile':
-        return <ProfileSection onLogout={onLogout} />;
+        return <ProfileSection onLogout={onLogout} userId={userId} />
       default:
         return <ChatArea />;
     }

@@ -40,6 +40,18 @@ class Amizade(db.Model):
     status = db.Column(db.String(20), default="pendente")  # pendente, aceito
 
 # -------------------------------
+# MODELO: Estatísticas do Usuário
+# -------------------------------
+class UserStats(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("usuario.id"), nullable=False, unique=True)
+    pontos = db.Column(db.Integer, default=0)
+    tarefas_completas = db.Column(db.Integer, default=0)
+    dias_ativos = db.Column(db.Integer, default=0)
+    nivel = db.Column(db.String(50), default="Eco Iniciante")
+    ultimo_acesso = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+# -------------------------------
 # Inicialização do banco
 # -------------------------------
 def inicializar_db():
@@ -65,7 +77,23 @@ def inicializar_db():
                 db.session.add(novo)
         
         db.session.commit()
-        print("✅ Usuários de teste criados!")
+        
+        # 🔥 Criar stats para usuários de teste
+        usuarios = Usuario.query.all()
+        for usuario in usuarios:
+            if not UserStats.query.filter_by(user_id=usuario.id).first():
+                # Dados fictícios variados
+                import random
+                stats = UserStats(
+                    user_id=usuario.id,
+                    pontos=random.randint(100, 2500),
+                    tarefas_completas=random.randint(5, 50),
+                    dias_ativos=random.randint(1, 30)
+                )
+                db.session.add(stats)
+        
+        db.session.commit()
+        print("✅ Usuários e estatísticas criados!")
 
 
 # -------------------------------
@@ -80,7 +108,8 @@ def home():
             "/api/register",
             "/api/chat",
             "/api/status",
-            "/api/friends/*"
+            "/api/friends/*",
+            "/api/profile/<user_id>"
         ]
     })
 
@@ -132,6 +161,11 @@ def register():
     db.session.add(novo)
     db.session.commit()
 
+    # Criar stats para o novo usuário
+    stats = UserStats(user_id=novo.id)
+    db.session.add(stats)
+    db.session.commit()
+
     return jsonify({"sucesso": True, "mensagem": "Conta criada com sucesso!"})
 
 
@@ -165,6 +199,136 @@ def status():
     return jsonify({
         "status": "ok",
         "usuarios_cadastrados": Usuario.query.count()
+    })
+
+
+# ======================================================
+# ==================== SISTEMA DE PERFIL ===============
+# ======================================================
+
+# -------------------------------
+# Buscar dados do perfil
+# -------------------------------
+@app.route('/api/profile/<int:user_id>', methods=['GET'])
+def get_profile(user_id):
+    """Busca todos os dados do perfil do usuário"""
+    
+    # Buscar usuário
+    usuario = Usuario.query.get(user_id)
+    if not usuario:
+        return jsonify({"erro": "Usuário não encontrado"}), 404
+    
+    # Buscar ou criar estatísticas
+    stats = UserStats.query.filter_by(user_id=user_id).first()
+    if not stats:
+        stats = UserStats(user_id=user_id)
+        db.session.add(stats)
+        db.session.commit()
+    
+    # Contar amigos aceitos
+    amigos_count = Amizade.query.filter(
+        ((Amizade.user_id == user_id) | (Amizade.friend_id == user_id)) &
+        (Amizade.status == "aceito")
+    ).count()
+    
+    # Determinar nível baseado em pontos
+    if stats.pontos < 500:
+        nivel = "Eco Iniciante"
+    elif stats.pontos < 1000:
+        nivel = "Guardião Verde"
+    elif stats.pontos < 2000:
+        nivel = "Defensor Verde"
+    else:
+        nivel = "Eco Master"
+    
+    # Atualizar nível se mudou
+    if stats.nivel != nivel:
+        stats.nivel = nivel
+        db.session.commit()
+    
+    return jsonify({
+        "id": usuario.id,
+        "nome": usuario.nome,
+        "email": usuario.email,
+        "pontos": stats.pontos,
+        "nivel": stats.nivel,
+        "tarefas_completas": stats.tarefas_completas,
+        "dias_ativos": stats.dias_ativos,
+        "amigos_count": amigos_count,
+        "proximo_nivel": 2000 if stats.pontos < 2000 else 3000
+    })
+
+
+# -------------------------------
+# Atualizar perfil
+# -------------------------------
+@app.route('/api/profile/update', methods=['POST'])
+def update_profile():
+    """Atualiza nome e email do usuário"""
+    data = request.get_json()
+    user_id = data.get('user_id')
+    novo_nome = data.get('nome')
+    novo_email = data.get('email')
+    
+    if not user_id:
+        return jsonify({"erro": "ID do usuário é obrigatório"}), 400
+    
+    usuario = Usuario.query.get(user_id)
+    if not usuario:
+        return jsonify({"erro": "Usuário não encontrado"}), 404
+    
+    # Verificar se email já existe (se mudou)
+    if novo_email and novo_email != usuario.email:
+        email_existe = Usuario.query.filter_by(email=novo_email).first()
+        if email_existe:
+            return jsonify({"erro": "Este email já está em uso"}), 400
+        usuario.email = novo_email
+    
+    if novo_nome:
+        usuario.nome = novo_nome
+    
+    db.session.commit()
+    
+    return jsonify({
+        "sucesso": True,
+        "mensagem": "Perfil atualizado com sucesso!",
+        "usuario": {
+            "id": usuario.id,
+            "nome": usuario.nome,
+            "email": usuario.email
+        }
+    })
+
+
+# -------------------------------
+# Atualizar senha
+# -------------------------------
+@app.route('/api/profile/change-password', methods=['POST'])
+def change_password():
+    """Altera a senha do usuário"""
+    data = request.get_json()
+    user_id = data.get('user_id')
+    senha_atual = data.get('senha_atual')
+    senha_nova = data.get('senha_nova')
+    
+    if not all([user_id, senha_atual, senha_nova]):
+        return jsonify({"erro": "Todos os campos são obrigatórios"}), 400
+    
+    usuario = Usuario.query.get(user_id)
+    if not usuario:
+        return jsonify({"erro": "Usuário não encontrado"}), 404
+    
+    # Verificar senha atual
+    if not check_password_hash(usuario.senha, senha_atual):
+        return jsonify({"erro": "Senha atual incorreta"}), 401
+    
+    # Atualizar senha
+    usuario.senha = generate_password_hash(senha_nova)
+    db.session.commit()
+    
+    return jsonify({
+        "sucesso": True,
+        "mensagem": "Senha alterada com sucesso!"
     })
 
 
@@ -351,5 +515,5 @@ if __name__ == '__main__':
     print("   - maria@email.com / 123456")
     print("   - joao@email.com / 123456")
     print("   - ana@email.com / 123456")
-    print("   - carlos@email.com / 123456")
+    print("   - pedro@gmail.com / 123456")
     app.run(debug=True, host='127.0.0.1', port=5000)
