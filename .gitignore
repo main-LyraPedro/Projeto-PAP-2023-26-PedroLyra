@@ -1,43 +1,61 @@
-# Python virtual environment
-/backend/venv/
+# ========================
+# Python (backend)
+# ========================
 
-# Python cache
-**/__pycache__/
-**/*.pyc
-**/*.pyo
-**/*.pyd
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+backend/venv/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+*.whl
+
+# PyInstaller
+*.manifest
+*.spec
+
+# IDEs
+.vscode/
+.idea/
+
+# ========================
+# Node.js / Frontend
+# ========================
 
 # Node modules
-/node_modules/
-/frontend/node_modules/
-
-# Build outputs
-/dist/
-/build/
-/frontend/dist/
-/frontend/.vite/
+node_modules/
+frontend/node_modules/
 
 # Logs
-*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Environment files
-.env
-.env.local
-.env.*.local
+# Build outputs
+dist/
+build/
+.out/
+*.local
+
+# Vite / Rollup / Next.js / Parcel cache
+.vite/
+*.cache/
+.cache/
+.next/
 
 # OS files
 .DS_Store
 Thumbs.db
 
-# IDE / Editor
-.vscode/
-.idea/
-*.sublime-workspace
-*.sublime-project
-
-# Misc
-*.swp
-*.lock
+# Environment files
+.env
+.env.local
+.env.*.local
