@@ -42,7 +42,7 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme, userId }: ChatPage
 };
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen flex">
       {/* Botão de menu mobile */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -69,6 +69,9 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme, userId }: ChatPage
       <div className="hidden lg:block fixed left-0 top-0 h-screen z-20">
         <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} />
       </div>
+
+      {/* Espaçador invisível — reserva o espaço da sidebar no layout flex */}
+      <div className="hidden lg:block w-20 lg:w-72 flex-shrink-0" />
 
       {/* Sidebar mobile com overlay */}
       <AnimatePresence>
@@ -101,7 +104,7 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme, userId }: ChatPage
       </AnimatePresence>
 
       {/* Conteúdo principal */}
-      <div className="lg:ml-72 p-4 lg:p-8 min-h-screen">
+      <div className="flex-1 p-4 lg:p-8 min-h-screen overflow-x-hidden">
         <motion.div
           key={activeSection}
           initial={{ opacity: 0, y: 20 }}
