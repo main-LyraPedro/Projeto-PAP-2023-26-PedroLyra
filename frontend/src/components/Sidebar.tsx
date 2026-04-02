@@ -1,8 +1,8 @@
 import { motion } from 'motion/react';
-import { MessageCircle, Trophy, CheckSquare, Users, User, Leaf } from 'lucide-react';
+import { MessageCircle, Trophy, CheckSquare, Users, User, Leaf, Newspaper } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
-type Section = 'chat' | 'ranking' | 'tasks' | 'friends' | 'profile';
+type Section = 'chat' | 'feed' | 'ranking' | 'tasks' | 'friends' | 'profile';
 
 interface SidebarProps {
   activeSection: Section;
@@ -12,6 +12,7 @@ interface SidebarProps {
 export function Sidebar({ activeSection, setActiveSection }: SidebarProps) {
   const menuItems = [
     { id: 'chat' as Section, icon: MessageCircle, label: 'Chat', emoji: '💬' },
+    { id: 'feed' as Section, icon: Newspaper, label: 'Feed', emoji: '🌍' },
     { id: 'ranking' as Section, icon: Trophy, label: 'Ranking', emoji: '🏆' },
     { id: 'tasks' as Section, icon: CheckSquare, label: 'Tarefas', emoji: '✓' },
     { id: 'friends' as Section, icon: Users, label: 'Amigos', emoji: '👥' },

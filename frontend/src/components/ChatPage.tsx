@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { ChatArea } from './ChatArea';
+import { FeedSection } from './FeedSection';
 import { RankingSection } from './RankingSection';
 import { TasksSection } from './TasksSection';
 import { FriendsSection } from './FriendsSection';
@@ -15,7 +16,7 @@ interface ChatPageProps {
   userId: number; // 🔥 RECEBE O ID DO USUÁRIO DO APP.TSX
 }
 
-type Section = 'chat' | 'ranking' | 'tasks' | 'friends' | 'profile';
+type Section = 'chat' | 'feed' | 'ranking' | 'tasks' | 'friends' | 'profile';
 
 export function ChatPage({ onLogout, isDarkMode, toggleTheme, userId }: ChatPageProps) {
   const [activeSection, setActiveSection] = useState<Section>('chat');
@@ -25,10 +26,12 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme, userId }: ChatPage
   switch (activeSection) {
     case 'chat':
       return <ChatArea />;
+    case 'feed':
+      return <FeedSection userId={userId} />;
     case 'ranking':
-  return <RankingSection userId={userId} />; {/* 🔥 ADICIONAR userId */}
+  return <RankingSection userId={userId} />;
     case 'tasks':
-      return <TasksSection userId={userId} />; {/* 🔥 ADICIONAR userId AQUI */}
+      return <TasksSection userId={userId} />;
     case 'friends':
       return <FriendsSection userId={userId} />;
     case 'profile':
@@ -39,7 +42,7 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme, userId }: ChatPage
 };
 
   return (
-    <div className="min-h-screen flex relative">
+    <div className="min-h-screen relative">
       {/* Botão de menu mobile */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -98,7 +101,7 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme, userId }: ChatPage
       </AnimatePresence>
 
       {/* Conteúdo principal */}
-      <div className="flex-1 p-4 lg:p-8 lg:ml-72">
+      <div className="lg:ml-72 p-4 lg:p-8 min-h-screen">
         <motion.div
           key={activeSection}
           initial={{ opacity: 0, y: 20 }}

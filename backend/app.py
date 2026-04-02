@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import os
 import random
 
@@ -16,7 +16,7 @@ CORS(app, supports_credentials=True)
 # -------------------------------
 # Configurações
 # -------------------------------
-app.config['SECRET_KEY'] = os.urandom(24)
+app.config['SECRET_KEY'] = 'ecochat-pap-2026-pedro-lyra-secret-key'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -87,6 +87,30 @@ class FotoMissao(db.Model):
     missao_id = db.Column(db.Integer, db.ForeignKey("missao_diaria.id"), nullable=False)
     filename = db.Column(db.String(200), nullable=False)
     enviada_em = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+# ======================================================
+# ==================== MODELOS DO FEED SOCIAL ==========
+# ======================================================
+
+class Publicacao(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("usuario.id"), nullable=False)
+    descricao = db.Column(db.String(500), nullable=False)
+    imagem = db.Column(db.String(200), nullable=True)
+    categoria = db.Column(db.String(50), default="geral")
+    criada_em = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+class Like(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("usuario.id"), nullable=False)
+    publicacao_id = db.Column(db.Integer, db.ForeignKey("publicacao.id"), nullable=False)
+
+class Comentario(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("usuario.id"), nullable=False)
+    publicacao_id = db.Column(db.Integer, db.ForeignKey("publicacao.id"), nullable=False)
+    texto = db.Column(db.String(500), nullable=False)
+    criada_em = db.Column(db.DateTime, default=db.func.current_timestamp())
 
 # -------------------------------
 # Funções auxiliares
@@ -251,14 +275,45 @@ def chat():
     mensagem = data.get('message', '').lower()
 
     respostas = {
-        'ola': 'Olá! 🌱 Como posso ajudar?',
-        'energia': 'Use LED e desligue aparelhos! 💡',
-        'agua': 'Economize água tomando banhos curtos! 💧',
-        'default': 'Pergunte sobre energia, água, consumo consciente 💚'
+        'ola': 'Olá! 🌱 Sou o EcoBot, o teu assistente para um planeta mais verde. Em que posso ajudar?',
+        'olá': 'Olá! 🌱 Sou o EcoBot, o teu assistente para um planeta mais verde. Em que posso ajudar?',
+        'oi': 'Oi! 🌿 Como posso ajudar-te hoje a ser mais sustentável?',
+        'bom dia': 'Bom dia! ☀️ Que tal começares o dia com uma ação sustentável?',
+        'boa tarde': 'Boa tarde! 🌍 Hoje praticaste algum hábito sustentável?',
+        'boa noite': 'Boa noite! 🌙 Lembra-te de desligar todas as luzes antes de dormir.',
+        'agua': '💧 Dicas para poupar água:\n• Toma banhos de menos de 5 minutos\n• Fecha a torneira enquanto te ensaboas\n• Usa a máquina de lavar só quando estiver cheia\n• Recolhe água da chuva para regar plantas',
+        'água': '💧 Dicas para poupar água:\n• Toma banhos de menos de 5 minutos\n• Fecha a torneira enquanto te ensaboas\n• Usa a máquina de lavar só quando estiver cheia\n• Recolhe água da chuva para regar plantas',
+        'banho': '🚿 Um banho de 5 minutos usa cerca de 40L de água. Reduzir o tempo de banho é uma das ações mais impactantes!',
+        'torneira': '🚰 Deixar a torneira aberta enquanto lavas os dentes desperdiça até 12L por minuto. Fecha sempre!',
+        'energia': '💡 Dicas para poupar energia:\n• Usa lâmpadas LED (usam 80% menos energia)\n• Desliga aparelhos da tomada quando não os usas\n• Aproveita a luz natural durante o dia\n• Usa a máquina de lavar a baixa temperatura',
+        'eletricidade': '⚡ Em modo standby os aparelhos chegam a consumir 10% da energia da casa. Desliga sempre da tomada!',
+        'led': '💡 Lâmpadas LED consomem 80% menos energia e duram 25x mais. Vale muito a pena trocar!',
+        'solar': '☀️ Painéis solares podem reduzir a conta de eletricidade em até 70%. É uma das melhores apostas para o futuro!',
+        'recicla': '♻️ Como reciclar:\n• Azul → papel e cartão\n• Amarelo → plástico e metal\n• Verde → vidro\n• Castanho → orgânicos\nLimpa as embalagens antes de reciclar!',
+        'reciclar': '♻️ Como reciclar:\n• Azul → papel e cartão\n• Amarelo → plástico e metal\n• Verde → vidro\n• Castanho → orgânicos\nLimpa as embalagens antes de reciclar!',
+        'reciclagem': '♻️ Em Portugal, cada pessoa produz cerca de 500kg de lixo por ano. Separar corretamente pode recuperar até 70% desses materiais!',
+        'lixo': '🗑️ Separa o teu lixo! Orgânico, reciclável e não reciclável têm destinos muito diferentes.',
+        'plastico': '🚫 O plástico demora entre 100 a 1000 anos a degradar-se. Prefere sempre alternativas reutilizáveis!',
+        'plástico': '🚫 O plástico demora entre 100 a 1000 anos a degradar-se. Prefere sempre alternativas reutilizáveis!',
+        'carro': '🚗 Considera:\n• Transporte público\n• Bicicleta para curtas distâncias\n• Partilha de carro (carpooling)\n• Caminhar! Os transportes causam 25% das emissões de CO2.',
+        'bicicleta': '🚴 A bicicleta é das mais sustentáveis! Além de não poluir, faz bem à saúde. Para distâncias até 5-6km é quase sempre a melhor opção.',
+        'transporte': '🚌 O transporte público em vez do carro pode reduzir a tua pegada de carbono em até 70% nessa viagem!',
+        'carne': '🥩 Produzir 1kg de carne de vaca emite 27kg de CO2 e usa 15.000L de água. Reduzir o consumo é muito impactante!',
+        'vegetariano': '🥗 Uma alimentação com menos carne reduz significativamente a tua pegada ecológica. Experimenta 1 ou 2 dias sem carne!',
+        'comida': '🥦 Prefere produtos locais e sazonais, reduz a carne vermelha e evita o desperdício alimentar.',
+        'desperdicio': '🍎 Em Portugal desperdiçamos cerca de 1 milhão de toneladas de alimentos por ano. Planeia as refeições!',
+        'desperdício': '🍎 Em Portugal desperdiçamos cerca de 1 milhão de toneladas de alimentos por ano. Planeia as refeições!',
+        'arvore': '🌳 Plantar árvores é uma das formas mais diretas de combater as alterações climáticas. Uma árvore adulta absorve ~22kg de CO2 por ano!',
+        'árvore': '🌳 Plantar árvores é uma das formas mais diretas de combater as alterações climáticas. Uma árvore adulta absorve ~22kg de CO2 por ano!',
+        'oceano': '🌊 Os oceanos absorvem 30% do CO2 e produzem metade do oxigénio que respiramos. Reduzir o plástico é essencial!',
+        'sustentabilidade': '🌍 Sustentabilidade é viver de forma a não comprometer os recursos das gerações futuras. Pequenas ações têm impacto enorme!',
+        'co2': '🏭 Para reduzir o CO2: viaja menos de avião, come menos carne e opta por energia renovável.',
+        'clima': '🌡️ A temperatura média global subiu 1.1 graus desde a era pré-industrial. Cada décima de grau importa!',
+        'default': '🌍 Estou aqui para te ajudar! Podes perguntar sobre:\n• 💧 Água\n• ⚡ Energia\n• ♻️ Reciclagem\n• 🚴 Transportes\n• 🥗 Alimentação\n• 🌳 Natureza'
     }
 
     for chave in respostas:
-        if chave in mensagem:
+        if chave != 'default' and chave in mensagem:
             return jsonify({"response": respostas[chave]})
 
     return jsonify({"response": respostas["default"]})
@@ -838,6 +893,172 @@ def get_feed_ecoreal(user_id):
 @app.route('/api/ecoreal/imagem/<filename>', methods=['GET'])
 def get_imagem(filename):
     """Retorna a imagem"""
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+
+# ======================================================
+# ==================== FEED SOCIAL =====================
+# ======================================================
+
+@app.route('/api/posts', methods=['POST'])
+def criar_publicacao():
+    user_id = None
+    descricao = None
+    categoria = 'geral'
+    imagem_filename = None
+
+    if request.content_type and 'multipart' in request.content_type:
+        user_id = request.form.get('user_id')
+        descricao = request.form.get('descricao')
+        categoria = request.form.get('categoria', 'geral')
+        if 'imagem' in request.files:
+            file = request.files['imagem']
+            if file and file.filename and allowed_file(file.filename):
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = secure_filename(f"post_{user_id}_{timestamp}_{file.filename}")
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                imagem_filename = filename
+    else:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        descricao = data.get('descricao')
+        categoria = data.get('categoria', 'geral')
+
+    if not user_id or not descricao:
+        return jsonify({"erro": "user_id e descricao são obrigatórios"}), 400
+
+    nova_pub = Publicacao(
+        user_id=int(user_id),
+        descricao=descricao,
+        categoria=categoria,
+        imagem=imagem_filename
+    )
+    db.session.add(nova_pub)
+
+    stats = UserStats.query.filter_by(user_id=int(user_id)).first()
+    if stats:
+        stats.pontos += 5
+
+    db.session.commit()
+    usuario = Usuario.query.get(int(user_id))
+
+    return jsonify({
+        "sucesso": True,
+        "mensagem": "Publicação criada! +5 pontos 🌱",
+        "post": {
+            "id": nova_pub.id,
+            "descricao": nova_pub.descricao,
+            "categoria": nova_pub.categoria,
+            "imagem_url": f"/api/uploads/{imagem_filename}" if imagem_filename else None,
+            "criada_em": nova_pub.criada_em.isoformat(),
+            "usuario": {"id": usuario.id, "nome": usuario.nome},
+            "likes": 0,
+            "comentarios": 0,
+            "user_liked": False
+        }
+    }), 201
+
+
+@app.route('/api/feed/<int:user_id>', methods=['GET'])
+def get_feed(user_id):
+    amizades = Amizade.query.filter(
+        ((Amizade.user_id == user_id) | (Amizade.friend_id == user_id)) &
+        (Amizade.status == "aceito")
+    ).all()
+
+    amigos_ids = [user_id]
+    for a in amizades:
+        amigo_id = a.friend_id if a.user_id == user_id else a.user_id
+        amigos_ids.append(amigo_id)
+
+    publicacoes = Publicacao.query.filter(
+        Publicacao.user_id.in_(amigos_ids)
+    ).order_by(Publicacao.criada_em.desc()).limit(50).all()
+
+    feed = []
+    for pub in publicacoes:
+        usuario = Usuario.query.get(pub.user_id)
+        likes_count = Like.query.filter_by(publicacao_id=pub.id).count()
+        comentarios_count = Comentario.query.filter_by(publicacao_id=pub.id).count()
+        user_liked = Like.query.filter_by(publicacao_id=pub.id, user_id=user_id).first() is not None
+        feed.append({
+            "id": pub.id,
+            "descricao": pub.descricao,
+            "categoria": pub.categoria,
+            "imagem_url": f"/api/uploads/{pub.imagem}" if pub.imagem else None,
+            "criada_em": pub.criada_em.isoformat(),
+            "usuario": {"id": usuario.id, "nome": usuario.nome},
+            "likes": likes_count,
+            "comentarios": comentarios_count,
+            "user_liked": user_liked
+        })
+
+    return jsonify(feed)
+
+
+@app.route('/api/posts/<int:post_id>/like', methods=['POST'])
+def toggle_like(post_id):
+    data = request.get_json()
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({"erro": "user_id é obrigatório"}), 400
+
+    like_existente = Like.query.filter_by(publicacao_id=post_id, user_id=user_id).first()
+    if like_existente:
+        db.session.delete(like_existente)
+        db.session.commit()
+        likes = Like.query.filter_by(publicacao_id=post_id).count()
+        return jsonify({"sucesso": True, "acao": "removido", "likes": likes})
+    else:
+        novo_like = Like(user_id=user_id, publicacao_id=post_id)
+        db.session.add(novo_like)
+        db.session.commit()
+        likes = Like.query.filter_by(publicacao_id=post_id).count()
+        return jsonify({"sucesso": True, "acao": "adicionado", "likes": likes})
+
+
+@app.route('/api/posts/<int:post_id>/comments', methods=['GET'])
+def get_comments(post_id):
+    comentarios = Comentario.query.filter_by(publicacao_id=post_id).order_by(Comentario.criada_em.asc()).all()
+    result = []
+    for c in comentarios:
+        usuario = Usuario.query.get(c.user_id)
+        result.append({
+            "id": c.id,
+            "texto": c.texto,
+            "criada_em": c.criada_em.isoformat(),
+            "usuario": {"id": usuario.id, "nome": usuario.nome}
+        })
+    return jsonify(result)
+
+
+@app.route('/api/posts/<int:post_id>/comments', methods=['POST'])
+def add_comment(post_id):
+    data = request.get_json()
+    user_id = data.get('user_id')
+    texto = data.get('texto')
+    if not user_id or not texto:
+        return jsonify({"erro": "Dados insuficientes"}), 400
+
+    novo_comentario = Comentario(user_id=user_id, publicacao_id=post_id, texto=texto)
+    db.session.add(novo_comentario)
+    db.session.commit()
+
+    usuario = Usuario.query.get(user_id)
+    return jsonify({
+        "sucesso": True,
+        "comentario": {
+            "id": novo_comentario.id,
+            "texto": novo_comentario.texto,
+            "criada_em": novo_comentario.criada_em.isoformat(),
+            "usuario": {"id": usuario.id, "nome": usuario.nome}
+        }
+    })
+
+
+@app.route('/api/uploads/<filename>', methods=['GET'])
+def serve_upload(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
