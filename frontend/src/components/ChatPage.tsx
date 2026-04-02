@@ -63,7 +63,7 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme, userId }: ChatPage
       </motion.button>
 
       {/* Sidebar para desktop */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:block fixed left-0 top-0 h-screen z-20">
         <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} />
       </div>
 
@@ -98,7 +98,7 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme, userId }: ChatPage
       </AnimatePresence>
 
       {/* Conteúdo principal */}
-      <div className="flex-1 p-4 lg:p-8">
+      <div className="flex-1 p-4 lg:p-8 lg:ml-72">
         <motion.div
           key={activeSection}
           initial={{ opacity: 0, y: 20 }}
