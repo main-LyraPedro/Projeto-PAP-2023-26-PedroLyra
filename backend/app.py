@@ -325,6 +325,20 @@ def status():
         "usuarios_cadastrados": Usuario.query.count()
     })
 
+@app.route('/api/stats', methods=['GET'])
+def get_stats():
+    """Estatísticas globais da plataforma para a Landing Page"""
+    total_usuarios = Usuario.query.count()
+    total_publicacoes = Publicacao.query.count()
+    total_likes = Like.query.count()
+    total_tarefas = db.session.query(db.func.sum(UserStats.tarefas_completas)).scalar() or 0
+    return jsonify({
+        "usuarios": total_usuarios,
+        "publicacoes": total_publicacoes,
+        "likes": total_likes,
+        "tarefas_completas": int(total_tarefas)
+    })
+
 
 # ======================================================
 # ==================== SISTEMA DE PERFIL ===============

@@ -214,6 +214,7 @@ function PostCard({ post, userId, onLike }: { post: Post; userId: number; onLike
 
 export function FeedSection({ userId }: FeedSectionProps) {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [filtro, setFiltro] = useState<string>('todos');
   const [isLoading, setIsLoading] = useState(true);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [descricao, setDescricao] = useState('');
@@ -306,11 +307,15 @@ export function FeedSection({ userId }: FeedSectionProps) {
     }
   };
 
+  const postsFiltrados = filtro === 'todos'
+    ? posts
+    : posts.filter(p => p.categoria === filtro);
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-green-800 dark:text-green-300">Feed Ecológico</h1>
             <p className="text-gray-600 dark:text-gray-400">Partilha as tuas ações sustentáveis</p>
@@ -322,6 +327,33 @@ export function FeedSection({ userId }: FeedSectionProps) {
             {showCreatePost ? <X size={20} /> : <Plus size={20} />}
             <span className="ml-2 hidden sm:inline">{showCreatePost ? 'Cancelar' : 'Publicar'}</span>
           </Button>
+        </div>
+
+        {/* Filtros por categoria */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setFiltro('todos')}
+            className={`px-3 py-1 rounded-full text-sm border transition-all ${
+              filtro === 'todos'
+                ? 'bg-green-600 text-white border-green-600'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-green-400'
+            }`}
+          >
+            🌍 Todos
+          </button>
+          {CATEGORIAS.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => setFiltro(cat.id)}
+              className={`px-3 py-1 rounded-full text-sm border transition-all ${
+                filtro === cat.id
+                  ? 'bg-green-600 text-white border-green-600'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-green-400'
+              }`}
+            >
+              {cat.emoji} {cat.label}
+            </button>
+          ))}
         </div>
       </motion.div>
 
@@ -417,28 +449,30 @@ export function FeedSection({ userId }: FeedSectionProps) {
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
         </div>
-      ) : posts.length === 0 ? (
+      ) : postsFiltrados.length === 0 ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <Card className="border-green-200 dark:border-gray-700">
             <CardContent className="p-12 text-center">
-              <div className="text-6xl mb-4">🌱</div>
-              <h3 className="text-green-800 dark:text-green-300 mb-2">Nenhuma publicação ainda</h3>
+              <div className="text-6xl mb-4">{filtro === 'todos' ? '🌱' : CATEGORIAS.find(c => c.id === filtro)?.emoji ?? '🌿'}</div>
+              <h3 className="text-green-800 dark:text-green-300 mb-2">
+                {filtro === 'todos' ? 'Nenhuma publicação ainda' : `Sem publicações de ${CATEGORIAS.find(c => c.id === filtro)?.label}`}
+              </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Sê o primeiro! Partilha a tua primeira ação sustentável.
+                {filtro === 'todos' ? 'Sê o primeiro! Partilha a tua primeira ação sustentável.' : 'Sê o primeiro a publicar nesta categoria!'}
               </p>
               <Button
                 onClick={() => setShowCreatePost(true)}
                 className="bg-gradient-to-r from-green-500 to-emerald-600 text-white"
               >
                 <Plus size={20} className="mr-2" />
-                Criar primeira publicação
+                Criar publicação
               </Button>
             </CardContent>
           </Card>
         </motion.div>
       ) : (
         <div className="space-y-4">
-          {posts.map((post, index) => (
+          {postsFiltrados.map((post, index) => (
             <motion.div
               key={post.id}
               initial={{ opacity: 0, y: 20 }}
