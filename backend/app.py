@@ -490,10 +490,27 @@ def complete_task():
     db.session.add(tarefa_usuario)
     
     stats = UserStats.query.filter_by(user_id=user_id).first()
+    nivel_anterior = stats.nivel if stats else "Eco Iniciante"
+    novo_nivel = None
+
     if stats:
         stats.pontos += tarefa.pontos
         stats.tarefas_completas += 1
-        
+
+        # ── Lógica de Streak ──────────────────────────────
+        hoje = date.today()
+        if stats.ultima_missao is None:
+            stats.streak_atual = 1
+        elif stats.ultima_missao == hoje:
+            pass  # Já completou hoje, streak não muda
+        elif stats.ultima_missao == hoje - timedelta(days=1):
+            stats.streak_atual += 1  # Dia consecutivo!
+        else:
+            stats.streak_atual = 1  # Quebrou a sequência, recomeça
+        stats.ultima_missao = hoje
+        stats.dias_ativos += 1
+        # ─────────────────────────────────────────────────
+
         if stats.pontos < 500:
             stats.nivel = "Eco Iniciante"
         elif stats.pontos < 1000:
@@ -502,14 +519,19 @@ def complete_task():
             stats.nivel = "Defensor Verde"
         else:
             stats.nivel = "Eco Master"
-    
+
+        if stats.nivel != nivel_anterior:
+            novo_nivel = stats.nivel
+
     db.session.commit()
-    
+
     return jsonify({
         "sucesso": True,
         "mensagem": f"Parabéns! +{tarefa.pontos} pontos",
         "novos_pontos": stats.pontos if stats else 0,
-        "nivel": stats.nivel if stats else "Eco Iniciante"
+        "nivel": stats.nivel if stats else "Eco Iniciante",
+        "novo_nivel": novo_nivel,
+        "streak": stats.streak_atual if stats else 1
     })
 
 @app.route('/api/tasks/uncomplete', methods=['POST'])

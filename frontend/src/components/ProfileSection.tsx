@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { User, Mail, Lock, LogOut, Save } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { User, Mail, Lock, LogOut, Save, Flame } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Button } from './ui/button';
@@ -31,6 +31,7 @@ export function ProfileSection({ onLogout, userId }: ProfileSectionProps) {
     tasksCompleted: 0,
     friendsCount: 0,
     daysActive: 0,
+    streak: 0,
     avatar: '🌱'
   });
 
@@ -68,6 +69,7 @@ export function ProfileSection({ onLogout, userId }: ProfileSectionProps) {
             tasksCompleted: data.tarefas_completas,
             friendsCount: data.amigos_count,
             daysActive: data.dias_ativos,
+            streak: data.streak ?? 0,
             avatar: '🌱'
           });
         } else {
@@ -199,6 +201,44 @@ export function ProfileSection({ onLogout, userId }: ProfileSectionProps) {
               </div>
               
               <div className="flex-1 space-y-4">
+                {/* Streak em destaque */}
+                <AnimatePresence>
+                  {userStats.streak > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="relative overflow-hidden rounded-2xl p-4 bg-gradient-to-r from-orange-500 to-amber-500"
+                    >
+                      <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 70% 50%, rgba(255,255,255,0.4) 0%, transparent 60%)' }} />
+                      <div className="relative flex items-center gap-4">
+                        <motion.div
+                          animate={{ scale: [1, 1.15, 1] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                          className="text-4xl"
+                        >
+                          🔥
+                        </motion.div>
+                        <div>
+                          <p className="text-orange-100 text-xs font-semibold uppercase tracking-widest">Sequência atual</p>
+                          <p className="text-white font-black text-3xl leading-none">
+                            {userStats.streak} {userStats.streak === 1 ? 'dia' : 'dias'}
+                          </p>
+                          <p className="text-orange-200 text-xs mt-0.5">
+                            {userStats.streak >= 30 ? '🏆 Lendário!' :
+                             userStats.streak >= 14 ? '⭐ Imparável!' :
+                             userStats.streak >= 7  ? '💪 Uma semana!' :
+                             userStats.streak >= 3  ? '👍 A ganhar ritmo!' :
+                             'Continua assim!'}
+                          </p>
+                        </div>
+                        <div className="ml-auto text-right">
+                          <Flame size={32} className="text-orange-200 opacity-60" />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 <div>
                   <div className="flex justify-between mb-2">
                     <span className="text-sm text-gray-600 dark:text-gray-400">
@@ -213,19 +253,19 @@ export function ProfileSection({ onLogout, userId }: ProfileSectionProps) {
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="text-center p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
-                    <div className="text-green-600 dark:text-green-400">{userStats.points}</div>
+                    <div className="text-green-600 dark:text-green-400 font-bold">{userStats.points}</div>
                     <div className="text-xs text-gray-600 dark:text-gray-400">Pontos</div>
                   </div>
                   <div className="text-center p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                    <div className="text-blue-600 dark:text-blue-400">{userStats.tasksCompleted}</div>
+                    <div className="text-blue-600 dark:text-blue-400 font-bold">{userStats.tasksCompleted}</div>
                     <div className="text-xs text-gray-600 dark:text-gray-400">Tarefas</div>
                   </div>
                   <div className="text-center p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20">
-                    <div className="text-purple-600 dark:text-purple-400">{userStats.friendsCount}</div>
+                    <div className="text-purple-600 dark:text-purple-400 font-bold">{userStats.friendsCount}</div>
                     <div className="text-xs text-gray-600 dark:text-gray-400">Amigos</div>
                   </div>
                   <div className="text-center p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20">
-                    <div className="text-orange-600 dark:text-orange-400">{userStats.daysActive}</div>
+                    <div className="text-orange-600 dark:text-orange-400 font-bold">{userStats.daysActive}</div>
                     <div className="text-xs text-gray-600 dark:text-gray-400">Dias ativos</div>
                   </div>
                 </div>

@@ -75,10 +75,33 @@ export function TasksSection({ userId }: TasksSectionProps) {
         const data = await res.json();
 
         if (res.ok) {
-          toast.success(`Parabéns! +${task.pontos} pontos 🌱`);
-          
-          // Atualizar localmente
-          setTasks(tasks.map(t => 
+          // Toast principal de pontos
+          toast.success(`+${task.pontos} pontos! 🌱`, {
+            description: data.mensagem
+          });
+
+          // Toast de streak 🔥
+          if (data.streak && data.streak > 1) {
+            const streakMsg =
+              data.streak >= 30 ? `🏆 ${data.streak} dias! LENDÁRIO!` :
+              data.streak >= 14 ? `⭐ ${data.streak} dias consecutivos! Imparável!` :
+              data.streak >= 7  ? `💪 ${data.streak} dias! Uma semana!` :
+              data.streak >= 3  ? `🔥 ${data.streak} dias! Continua!` :
+              `🔥 ${data.streak} dias seguidos!`;
+            setTimeout(() => toast(streakMsg, {
+              style: { background: '#f97316', color: 'white', border: 'none' }
+            }), 600);
+          }
+
+          // Toast de nível subido 🎉
+          if (data.novo_nivel) {
+            setTimeout(() => toast(`🎉 Subiste de nível!`, {
+              description: `Agora és ${data.novo_nivel}`,
+              style: { background: '#10b981', color: 'white', border: 'none' }
+            }), 1200);
+          }
+
+          setTasks(tasks.map(t =>
             t.id === taskId ? { ...t, completada: true } : t
           ));
         } else {
