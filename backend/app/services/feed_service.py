@@ -1,6 +1,5 @@
 from ..models.social import Publicacao, Like, Comentario
 from ..models.user import Usuario, UserStats
-from ..models.friends import Amizade
 from ..extensions import db
 from datetime import datetime
 import os
@@ -45,27 +44,19 @@ def criar_post(user_id, descricao: str, categoria: str = 'geral', imagem_file=No
 
 
 def get_feed(user_id: int) -> list:
-    """Devolve o feed do utilizador (posts próprios + amigos)."""
-    amizades = Amizade.query.filter(
-        ((Amizade.user_id == user_id) | (Amizade.friend_id == user_id))
-        & (Amizade.status == "aceito")
-    ).all()
-
-    amigos_ids = [user_id]
-    for a in amizades:
-        amigo_id = a.friend_id if a.user_id == user_id else a.user_id
-        amigos_ids.append(amigo_id)
-
+    """Devolve o feed global — todas as publicações, ordenadas da mais recente."""
     publicacoes = (
-        Publicacao.query.filter(Publicacao.user_id.in_(amigos_ids))
+        Publicacao.query
         .order_by(Publicacao.criada_em.desc())
-        .limit(50)
+        .limit(100)
         .all()
     )
 
     feed = []
     for pub in publicacoes:
         usuario = Usuario.query.get(pub.user_id)
+        if not usuario:
+            continue
         likes_count = Like.query.filter_by(publicacao_id=pub.id).count()
         comentarios_count = Comentario.query.filter_by(publicacao_id=pub.id).count()
         user_liked = Like.query.filter_by(publicacao_id=pub.id, user_id=user_id).first() is not None
