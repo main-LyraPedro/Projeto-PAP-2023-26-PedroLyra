@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Sun, Moon, ArrowRight, Leaf } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useInView } from 'motion/react';
+import { Sun, Moon, ArrowRight, Leaf, Star, Users, Zap, Shield, ChevronDown, MessageCircle, Trophy, Camera } from 'lucide-react';
+import landingBG from '../assets/landingpageBG.png';
 
 interface LandingPageProps {
   onEnter: () => void;
@@ -8,84 +9,59 @@ interface LandingPageProps {
   toggleTheme: () => void;
 }
 
-/* ─── Cycling words (Runway style) ────────────────────── */
 const WORDS = ['recicla', 'poupa', 'inspira', 'conecta', 'impacta'];
 
-function CyclingWord({ dark }: { dark: boolean }) {
+function CyclingWord() {
   const [idx, setIdx] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setIdx(i => (i + 1) % WORDS.length), 2000);
+    const t = setInterval(() => setIdx(i => (i + 1) % WORDS.length), 2200);
     return () => clearInterval(t);
   }, []);
   return (
     <AnimatePresence mode="wait">
-      <motion.span
-        key={idx}
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -12 }}
-        transition={{ duration: 0.35 }}
-        style={{
-          background: dark
-            ? 'linear-gradient(135deg,#34d399,#10b981,#06b6d4)'
-            : 'linear-gradient(135deg,#059669,#10b981,#0284c7)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          display: 'inline-block',
-        }}
-      >
+      <motion.span key={idx}
+        initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }}
+        transition={{ duration: 0.38 }}
+        style={{ background: 'linear-gradient(135deg,#34d399,#10b981,#6ee7b7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'inline-block' }}>
         {WORDS[idx]}
       </motion.span>
     </AnimatePresence>
   );
 }
 
-/* ─── Animated counter ─────────────────────────────────── */
-function Counter({ n, label, dark }: { n: number; label: string; dark: boolean }) {
+function Counter({ n, label }: { n: number; label: string }) {
   const [c, setC] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true });
   useEffect(() => {
-    let v = 0;
-    const inc = n / 60;
-    const t = setInterval(() => {
-      v += inc;
-      if (v >= n) { setC(n); clearInterval(t); }
-      else setC(Math.floor(v));
-    }, 30);
+    if (!inView) return;
+    let v = 0; const inc = n / 70;
+    const t = setInterval(() => { v += inc; if (v >= n) { setC(n); clearInterval(t); } else setC(Math.floor(v)); }, 22);
     return () => clearInterval(t);
-  }, [n]);
-  const num = dark ? 'text-white' : 'text-gray-900';
-  const lbl = dark ? 'text-white/40' : 'text-gray-400';
+  }, [inView, n]);
   return (
-    <div>
-      <p className={`text-4xl font-black tabular-nums ${num}`}>{c.toLocaleString('pt-PT')}+</p>
-      <p className={`text-xs uppercase tracking-widest mt-1 ${lbl}`}>{label}</p>
+    <div ref={ref} style={{ textAlign: 'center', padding: '24px 16px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)', borderRadius: 16 }}>
+      <p style={{ fontSize: 48, fontWeight: 900, color: '#fff', lineHeight: 1, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>{c.toLocaleString('pt-PT')}+</p>
+      <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.18em', color: 'rgba(255,255,255,0.5)', marginTop: 8, fontWeight: 600 }}>{label}</p>
     </div>
   );
 }
 
-/* ─── Feature row (alternating, Perplexity style) ──────── */
-type Feat = { n: string; emoji: string; title: string; desc: string; bullets: string[] };
-const FEATS: Feat[] = [
-  {
-    n: '01', emoji: '📸', title: 'Feed Ecológico',
-    desc: 'Uma rede social focada em ações reais. Publica fotos, recebe likes e inspira a tua comunidade a fazer mais pelo planeta.',
-    bullets: ['Posts com foto e descrição', 'Likes e comentários', 'Filtro por categoria'],
-  },
-  {
-    n: '02', emoji: '🤖', title: 'EcoBot — IA integrada',
-    desc: 'Um assistente conversacional especializado em sustentabilidade. Perguntas diretas, respostas claras e dicas acionáveis.',
-    bullets: ['Respostas em tempo real', 'Dados sobre clima, água e energia', 'Sempre disponível'],
-  },
-  {
-    n: '03', emoji: '🏆', title: 'Missões & Ranking',
-    desc: 'Gamificação que funciona. Completa desafios diários, acumula pontos e sobe no ranking global da plataforma.',
-    bullets: ['Missões diárias, semanais e mensais', 'Ranking entre amigos', 'Sistema de níveis'],
-  },
+const FEATS = [
+  { icon: <Camera size={22} />, title: 'Feed Ecológico', color: '#10b981', desc: 'Publica ações reais, recebe likes e inspira a tua comunidade a agir pelo planeta.', bullets: ['Posts com foto e descrição', 'Likes e comentários em tempo real', 'Filtros por categoria ecológica'] },
+  { icon: <MessageCircle size={22} />, title: 'EcoBot — IA', color: '#06b6d4', desc: 'Assistente inteligente especializado em sustentabilidade, disponível 24/7.', bullets: ['Respostas instantâneas', 'Dados sobre clima, água e energia', 'Dicas acionáveis personalizadas'] },
+  { icon: <Trophy size={22} />, title: 'Missões & Ranking', color: '#f59e0b', desc: 'Gamificação real. Completa desafios, acumula pontos e sobe no ranking global.', bullets: ['Missões diárias e semanais', 'Ranking entre amigos', 'Sistema de níveis e conquistas'] },
 ];
 
 export function LandingPage({ onEnter, isDarkMode, toggleTheme }: LandingPageProps) {
   const [stats, setStats] = useState({ usuarios: 5, publicacoes: 12, likes: 48, tarefas: 30 });
-  const dark = isDarkMode;
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', fn);
+    return () => window.removeEventListener('scroll', fn);
+  }, []);
 
   useEffect(() => {
     fetch('http://127.0.0.1:5000/api/stats').then(r => r.json())
@@ -93,211 +69,234 @@ export function LandingPage({ onEnter, isDarkMode, toggleTheme }: LandingPagePro
       .catch(() => {});
   }, []);
 
-  /* theme tokens */
-  const T = {
-    bg: dark ? '#080c0a' : '#ffffff',
-    border: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)',
-    text: dark ? '#ffffff' : '#0a0a0a',
-    sub: dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
-    card: dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-    sep: dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
-    accent: dark ? '#10b981' : '#059669',
-    accentSub: dark ? 'rgba(16,185,129,0.12)' : 'rgba(5,150,105,0.08)',
-    accentBorder: dark ? 'rgba(16,185,129,0.3)' : 'rgba(5,150,105,0.25)',
-    navBg: dark ? 'rgba(8,12,10,0.85)' : 'rgba(255,255,255,0.85)',
-  };
-
   return (
-    <div style={{ background: T.bg, color: T.text, fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif' }} className="min-h-screen">
+    <div style={{ fontFamily: '"Inter","Segoe UI",system-ui,sans-serif', background: '#020b05', color: '#fff' }}>
 
-      {/* ── NAV ── */}
-      <motion.nav
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        style={{ background: T.navBg, borderBottom: `1px solid ${T.border}`, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
-        className="fixed top-0 left-0 right-0 z-50"
-      >
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Leaf size={18} color={T.accent} />
-            <span style={{ color: T.text, letterSpacing: '-0.02em' }} className="font-bold text-base">EcoChat</span>
+      {/* NAV */}
+      <motion.nav initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, transition: 'all 0.3s ease',
+          background: scrolled ? 'rgba(2,11,5,0.92)' : 'transparent',
+          backdropFilter: scrolled ? 'blur(20px)' : 'none',
+          borderBottom: scrolled ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: 68, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ background: 'linear-gradient(135deg,#10b981,#059669)', borderRadius: 10, padding: '7px 8px', display: 'flex' }}>
+              <Leaf size={17} color="white" />
+            </div>
+            <span style={{ fontWeight: 900, fontSize: 20, letterSpacing: '-0.03em', color: '#fff' }}>EcoChat</span>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={toggleTheme} style={{ color: T.sub, background: T.card, border: `1px solid ${T.border}` }}
-              className="p-2 rounded-lg transition-all hover:opacity-80">
-              {dark ? <Sun size={16} /> : <Moon size={16} />}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button onClick={toggleTheme}
+              style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: 8, color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex' }}>
+              {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
             </button>
             <button onClick={onEnter}
-              style={{ background: T.accentSub, border: `1px solid ${T.accentBorder}`, color: T.accent }}
-              className="px-4 py-1.5 text-sm font-semibold rounded-lg flex items-center gap-1.5 transition-all hover:opacity-80">
-              Entrar <ArrowRight size={14} />
+              style={{ border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '9px 20px', fontSize: 14, fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
+              Entrar
             </button>
+            <motion.button onClick={onEnter} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+              style={{ background: 'linear-gradient(135deg,#10b981,#059669)', boxShadow: '0 0 22px rgba(16,185,129,0.45)', borderRadius: 10, padding: '9px 20px', fontSize: 14, fontWeight: 700, color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              Registar <ArrowRight size={13} />
+            </motion.button>
           </div>
         </div>
       </motion.nav>
 
-      {/* ── HERO ── */}
-      <section className="max-w-4xl mx-auto px-6 pt-40 pb-32 text-center">
+      {/* HERO */}
+      <section style={{ backgroundImage: `url(${landingBG})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed', minHeight: '100vh', position: 'relative' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg,rgba(2,8,4,0.65) 0%,rgba(2,12,6,0.82) 50%,rgba(2,11,5,1) 100%)' }} />
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 1200, margin: '0 auto', padding: '0 24px', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', paddingTop: 100, paddingBottom: 80 }}>
 
-        {/* Badge */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="inline-flex items-center gap-2 mb-10">
-          <span style={{ background: T.accentSub, border: `1px solid ${T.accentBorder}`, color: T.accent }}
-            className="text-xs font-semibold px-3 py-1 rounded-full tracking-wide">
-            🌍 PAP 2023–2026 · Pedro Lyra
-          </span>
-        </motion.div>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} style={{ marginBottom: 32 }}>
+            <span style={{ background: 'rgba(16,185,129,0.14)', border: '1px solid rgba(16,185,129,0.35)', color: '#34d399', fontSize: 11, fontWeight: 700, padding: '7px 18px', borderRadius: 100, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+              🌍 PAP 2023–2026 · Pedro Lyra
+            </span>
+          </motion.div>
 
-        {/* Headline */}
-        <motion.h1
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.7 }}
-          style={{ letterSpacing: '-0.035em', lineHeight: 1.0 }}
-          className="text-6xl sm:text-7xl md:text-8xl font-black mb-8"
-        >
-          O planeta pediu
-          <br />
-          uma rede social.
-          <br />
-          Tu{' '}
-          <span className="inline-block" style={{ minWidth: '6.5ch', textAlign: 'left' }}>
-            <CyclingWord dark={dark} />.
-          </span>
-        </motion.h1>
+          <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.75 }}
+            style={{ fontSize: 'clamp(48px,8vw,96px)', fontWeight: 900, letterSpacing: '-0.045em', lineHeight: 1.04, color: '#fff', marginBottom: 28, maxWidth: 900 }}>
+            Transforma pequenas ações<br />em impacto real.<br />
+            Tu <span style={{ display: 'inline-block', minWidth: '5ch', textAlign: 'left' }}><CyclingWord />.</span>
+          </motion.h1>
 
-        {/* Subtitle */}
-        <motion.p
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          style={{ color: T.sub, letterSpacing: '-0.01em' }}
-          className="text-xl md:text-2xl max-w-xl mx-auto mb-12 leading-relaxed"
-        >
-          Partilha ações sustentáveis, completa missões ecológicas e constrói um impacto real — junto à tua comunidade.
-        </motion.p>
+          <motion.p initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+            style={{ fontSize: 18, color: 'rgba(255,255,255,0.62)', maxWidth: 580, lineHeight: 1.65, marginBottom: 44 }}>
+            Rede social ecológica com missões, ranking e comunidade sustentável. Gratuito e open source.
+          </motion.p>
 
-        {/* CTA */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
-          className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-          <motion.button
-            onClick={onEnter}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            className="px-8 py-3.5 rounded-xl font-bold text-base text-white flex items-center gap-2"
-            style={{ background: 'linear-gradient(135deg,#10b981,#059669)', boxShadow: '0 0 26px rgba(16,185,129,0.35)' }}
-          >
-            Começar gratuitamente <ArrowRight size={18} />
-          </motion.button>
-          <button onClick={onEnter}
-            style={{ color: T.sub, border: `1px solid ${T.border}`, background: T.card }}
-            className="px-8 py-3.5 rounded-xl font-medium text-base transition-all hover:opacity-70">
-            Já tenho conta
-          </button>
-        </motion.div>
+          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65 }}
+            style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 72 }}>
+            <motion.button onClick={onEnter} whileHover={{ scale: 1.05, boxShadow: '0 0 50px rgba(16,185,129,0.6)' }} whileTap={{ scale: 0.97 }}
+              style={{ background: 'linear-gradient(135deg,#10b981,#059669)', boxShadow: '0 0 30px rgba(16,185,129,0.42)', borderRadius: 14, padding: '16px 36px', fontSize: 16, fontWeight: 700, color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Zap size={18} /> Criar Conta — É Grátis
+            </motion.button>
+            <motion.button onClick={onEnter} whileHover={{ scale: 1.03, background: 'rgba(255,255,255,0.1)' }} whileTap={{ scale: 0.97 }}
+              style={{ border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(12px)', borderRadius: 14, padding: '16px 36px', fontSize: 16, fontWeight: 600, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+              Iniciar Sessão <ArrowRight size={16} />
+            </motion.button>
+          </motion.div>
 
-        {/* Scroll hint */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}
-          className="mt-20 flex flex-col items-center gap-2">
-          <motion.div animate={{ y: [0, 6, 0] }} transition={{ duration: 1.5, repeat: Infinity }}
-            style={{ width: 1, height: 48, background: `linear-gradient(to bottom, transparent, ${T.accent})` }} />
-        </motion.div>
-      </section>
-
-      {/* ── STATS ── */}
-      <motion.section
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
-        style={{ borderTop: `1px solid ${T.sep}`, borderBottom: `1px solid ${T.sep}` }}
-        className="py-16"
-      >
-        <div className="max-w-4xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-10">
-          <Counter n={stats.usuarios} label="utilizadores" dark={dark} />
-          <Counter n={stats.publicacoes} label="publicações" dark={dark} />
-          <Counter n={stats.likes} label="likes dados" dark={dark} />
-          <Counter n={stats.tarefas} label="missões feitas" dark={dark} />
-        </div>
-      </motion.section>
-
-      {/* ── FEATURES ── */}
-      <section className="max-w-4xl mx-auto px-6 py-28">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="mb-20">
-          <p style={{ color: T.sub }} className="text-xs uppercase tracking-[0.2em] mb-4">Funcionalidades</p>
-          <h2 style={{ letterSpacing: '-0.03em' }} className="text-4xl md:text-5xl font-black leading-tight max-w-lg">
-            Tudo o que precisas.<br />Nada do que não precisas.
-          </h2>
-        </motion.div>
-
-        <div className="space-y-0">
-          {FEATS.map((f, i) => (
-            <motion.div
-              key={f.n}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.9 + i * 0.1 }}
-              whileHover={{ backgroundColor: dark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' }}
-              style={{ borderTop: `1px solid ${T.sep}` }}
-              className="py-12 grid md:grid-cols-[80px_1fr_1fr] gap-8 rounded-xl px-4 transition-colors duration-200 cursor-default"
-            >
-              {/* Number */}
-              <div style={{ color: T.accent }} className="text-sm font-bold uppercase tracking-widest pt-1">{f.n}</div>
-              {/* Left */}
-              <div>
-                <p className="text-3xl mb-3">{f.emoji}</p>
-                <h3 style={{ letterSpacing: '-0.02em', color: T.text }} className="text-2xl font-black mb-3">{f.title}</h3>
-                <p style={{ color: T.sub }} className="text-base leading-relaxed">{f.desc}</p>
+          {/* Product Mockup */}
+          <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.85, duration: 0.9 }}
+            style={{ width: '100%', maxWidth: 720, background: 'rgba(10,26,16,0.9)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 20, overflow: 'hidden', boxShadow: '0 40px 120px rgba(0,0,0,0.7), 0 0 0 1px rgba(16,185,129,0.1)' }}>
+            {/* Browser chrome */}
+            <div style={{ background: 'rgba(5,15,8,0.95)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {['#ff5f57','#febc2e','#28c840'].map(c => <div key={c} style={{ width: 11, height: 11, borderRadius: '50%', background: c }} />)}
               </div>
-              {/* Right — bullets */}
-              <div className="flex flex-col gap-3 pt-1">
-                {f.bullets.map(b => (
-                  <div key={b} className="flex items-start gap-2.5">
-                    <span style={{ color: T.accent, marginTop: 3 }}>✓</span>
-                    <span style={{ color: T.sub }} className="text-sm">{b}</span>
+              <div style={{ flex: 1, background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '4px 12px', fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>
+                ecochat.app
+              </div>
+            </div>
+            {/* App UI preview */}
+            <div style={{ padding: 20, display: 'grid', gridTemplateColumns: '200px 1fr', gap: 12, minHeight: 240 }}>
+              {/* Sidebar */}
+              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+                  <div style={{ background: 'linear-gradient(135deg,#10b981,#059669)', borderRadius: 7, padding: 5, display: 'flex' }}><Leaf size={12} color="white" /></div>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#fff' }}>EcoChat</span>
+                </div>
+                {['🏠 Feed', '🤖 EcoBot', '🏆 Ranking', '👤 Perfil'].map(item => (
+                  <div key={item} style={{ padding: '8px 10px', borderRadius: 8, fontSize: 12, color: item === '🏠 Feed' ? '#10b981' : 'rgba(255,255,255,0.45)', background: item === '🏠 Feed' ? 'rgba(16,185,129,0.1)' : 'transparent', marginBottom: 3, cursor: 'default' }}>{item}</div>
+                ))}
+              </div>
+              {/* Main feed */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[
+                  { user: 'Ana Silva', action: 'Fui de bicicleta para o trabalho hoje! 🚲', pts: '+15 pts', time: '2m' },
+                  { user: 'João Costa', action: 'Plantei 3 árvores no parque da cidade 🌳', pts: '+30 pts', time: '8m' },
+                ].map(post => (
+                  <div key={post.user} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '10px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{post.user}</span>
+                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{post.time}</span>
+                    </div>
+                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>{post.action}</p>
+                    <span style={{ fontSize: 10, background: 'rgba(16,185,129,0.15)', color: '#34d399', padding: '2px 8px', borderRadius: 20, fontWeight: 700 }}>{post.pts}</span>
                   </div>
                 ))}
               </div>
+            </div>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.6 }}
+            style={{ marginTop: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Descobrir</span>
+            <motion.div animate={{ y: [0, 7, 0] }} transition={{ duration: 1.6, repeat: Infinity }}>
+              <ChevronDown size={18} style={{ color: 'rgba(255,255,255,0.25)' }} />
             </motion.div>
-          ))}
-          <div style={{ borderTop: `1px solid ${T.sep}` }} />
+          </motion.div>
         </div>
       </section>
 
-      {/* ── FINAL CTA ── */}
-      <motion.section
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.2 }}
-        className="max-w-4xl mx-auto px-6 pb-32 text-center"
-      >
-        <div style={{ border: `1px solid ${T.border}`, background: T.card, borderRadius: 24 }} className="py-20 px-8">
-          <p style={{ color: T.accent }} className="text-xs uppercase tracking-[0.2em] mb-6">Junta-te à comunidade</p>
-          <h2
-            style={{ letterSpacing: '-0.03em' }}
-            className="text-5xl md:text-6xl font-black mb-6 max-w-xl mx-auto leading-tight"
-          >
-            O teu próximo hábito começa aqui.
-          </h2>
-          <p style={{ color: T.sub }} className="text-lg mb-10 max-w-md mx-auto">
-            Gratuito, simples e com impacto real. Regista-te e começa hoje.
-          </p>
-          <motion.button
-            onClick={onEnter}
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.97 }}
-            className="px-10 py-4 rounded-xl font-bold text-lg text-white inline-flex items-center gap-2"
-            style={{ background: 'linear-gradient(135deg,#10b981,#059669)', boxShadow: '0 0 40px rgba(16,185,129,0.3)' }}
-          >
-            Entrar na comunidade <ArrowRight size={20} />
-          </motion.button>
+      {/* STATS */}
+      <section style={{ background: '#020d06', borderTop: '1px solid rgba(16,185,129,0.12)', padding: '80px 24px' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+          <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            style={{ textAlign: 'center', marginBottom: 48 }}>
+            <p style={{ fontSize: 11, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.25em', fontWeight: 700 }}>Impacto real</p>
+          </motion.div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 16 }}>
+            <Counter n={stats.usuarios} label="Utilizadores" />
+            <Counter n={stats.publicacoes} label="Publicações" />
+            <Counter n={stats.likes} label="Likes dados" />
+            <Counter n={stats.tarefas} label="Missões feitas" />
+          </div>
         </div>
-      </motion.section>
+      </section>
 
-      {/* ── FOOTER ── */}
-      <footer style={{ borderTop: `1px solid ${T.sep}` }} className="text-center py-8">
-        <p style={{ color: T.sub }} className="text-xs tracking-wide">
-          EcoChat · Projeto Académico PAP 2023–2026 · Pedro Lyra
-        </p>
+      {/* FEATURES */}
+      <section style={{ background: '#040e07', padding: '100px 24px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            style={{ textAlign: 'center', marginBottom: 72 }}>
+            <p style={{ fontSize: 11, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.25em', fontWeight: 700, marginBottom: 16 }}>Funcionalidades</p>
+            <h2 style={{ fontSize: 'clamp(32px,5vw,52px)', fontWeight: 900, letterSpacing: '-0.035em', lineHeight: 1.1, color: '#fff' }}>
+              Tudo o que precisas.<br />
+              <span style={{ color: 'rgba(255,255,255,0.35)' }}>Nada do que não precisas.</span>
+            </h2>
+          </motion.div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 20 }}>
+            {FEATS.map((f, i) => (
+              <motion.div key={f.title}
+                initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.55 }}
+                whileHover={{ y: -8, boxShadow: `0 24px 70px ${f.color}18` }}
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 22, padding: 36, cursor: 'default', transition: 'box-shadow 0.3s' }}>
+                <div style={{ width: 56, height: 56, background: `${f.color}18`, border: `1px solid ${f.color}28`, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', color: f.color, marginBottom: 24 }}>
+                  {f.icon}
+                </div>
+                <h3 style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', marginBottom: 10 }}>{f.title}</h3>
+                <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1.65, marginBottom: 24 }}>{f.desc}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {f.bullets.map(b => (
+                    <div key={b} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ color: f.color, fontSize: 13, fontWeight: 700 }}>✓</span>
+                      <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{b}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* TRUST */}
+      <section style={{ background: '#020d06', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '48px 24px' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 40 }}>
+          {[{ icon: <Shield size={18} />, label: '100% Gratuito', sub: 'Sem custos escondidos' }, { icon: <Star size={18} />, label: 'Open Source', sub: 'Projeto académico' }, { icon: <Users size={18} />, label: 'Comunidade', sub: 'Cresce a cada dia' }].map(item => (
+            <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ color: '#10b981' }}>{item.icon}</div>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{item.label}</p>
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{item.sub}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* FINAL CTA */}
+      <section style={{ background: '#040e07', padding: '120px 24px' }}>
+        <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
+          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}>
+            <p style={{ fontSize: 11, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.25em', fontWeight: 700, marginBottom: 24 }}>Junta-te à comunidade</p>
+            <h2 style={{ fontSize: 'clamp(40px,7vw,80px)', fontWeight: 900, letterSpacing: '-0.045em', lineHeight: 1.05, color: '#fff', marginBottom: 20 }}>
+              Junta-te ao futuro<br />
+              <span style={{ background: 'linear-gradient(135deg,#34d399,#10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>sustentável hoje.</span>
+            </h2>
+            <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.5)', lineHeight: 1.65, maxWidth: 440, margin: '0 auto 48px' }}>
+              Gratuito, simples e com impacto real. Regista-te e começa hoje.
+            </p>
+            <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <motion.button onClick={onEnter} whileHover={{ scale: 1.05, boxShadow: '0 0 55px rgba(16,185,129,0.6)' }} whileTap={{ scale: 0.97 }}
+                style={{ background: 'linear-gradient(135deg,#10b981,#059669)', boxShadow: '0 0 35px rgba(16,185,129,0.4)', borderRadius: 14, padding: '18px 44px', fontSize: 17, fontWeight: 700, color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Zap size={20} /> Criar Conta Grátis
+              </motion.button>
+              <button onClick={onEnter}
+                style={{ border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: '18px 44px', fontSize: 17, fontWeight: 600, color: 'rgba(255,255,255,0.75)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                Já tenho conta <ArrowRight size={17} />
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer style={{ background: '#020b05', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '36px 24px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ background: 'linear-gradient(135deg,#10b981,#059669)', borderRadius: 8, padding: '5px 6px', display: 'flex' }}><Leaf size={13} color="white" /></div>
+            <span style={{ fontWeight: 800, fontSize: 15, color: 'rgba(255,255,255,0.8)' }}>EcoChat</span>
+          </div>
+          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', letterSpacing: '0.03em' }}>Projeto Académico PAP 2023–2026 · Pedro Lyra</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)' }}>Sistema operacional</span>
+          </div>
+        </div>
       </footer>
 
     </div>

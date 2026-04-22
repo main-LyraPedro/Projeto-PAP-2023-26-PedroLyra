@@ -25,31 +25,33 @@ export default function App() {
 
   return (
     <div className={isDarkMode ? 'dark' : ''}>
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-emerald-50 dark:from-gray-900 dark:via-green-950 dark:to-gray-900 transition-colors duration-500">
-        {page === 'landing' && (
-          <LandingPage
-            onEnter={() => setPage('login')}
-            isDarkMode={isDarkMode}
-            toggleTheme={() => setIsDarkMode(!isDarkMode)}
-          />
-        )}
-        {page === 'login' && (
+      {page === 'landing' && (
+        <LandingPage
+          onEnter={() => setPage('login')}
+          isDarkMode={isDarkMode}
+          toggleTheme={() => setIsDarkMode(!isDarkMode)}
+        />
+      )}
+      {page === 'login' && (
+        <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-emerald-50 dark:from-gray-900 dark:via-green-950 dark:to-gray-900 transition-colors duration-500">
           <LoginPage
             onLogin={handleLogin}
             isDarkMode={isDarkMode}
             toggleTheme={() => setIsDarkMode(!isDarkMode)}
           />
-        )}
-        {page === 'app' && (
+        </div>
+      )}
+      {page === 'app' && (
+        <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-emerald-50 dark:from-gray-900 dark:via-green-950 dark:to-gray-900 transition-colors duration-500">
           <ChatPage
             onLogout={handleLogout}
             isDarkMode={isDarkMode}
             toggleTheme={() => setIsDarkMode(!isDarkMode)}
             userId={userId!}
           />
-        )}
-        <Toaster />
-      </div>
+        </div>
+      )}
+      <Toaster />
     </div>
   );
 }
