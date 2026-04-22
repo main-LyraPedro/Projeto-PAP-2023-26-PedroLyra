@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, Mail, Lock, LogOut, Save, Flame } from 'lucide-react';
+import { User, Mail, Lock, LogOut, Save, Flame, Sun, Moon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Button } from './ui/button';
@@ -13,9 +13,11 @@ import { toast } from 'sonner';
 interface ProfileSectionProps {
   onLogout: () => void;
   userId: number;
+  isDarkMode?: boolean;
+  toggleTheme?: () => void;
 }
 
-export function ProfileSection({ onLogout, userId }: ProfileSectionProps) {
+export function ProfileSection({ onLogout, userId, isDarkMode = false, toggleTheme }: ProfileSectionProps) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -422,11 +424,46 @@ export function ProfileSection({ onLogout, userId }: ProfileSectionProps) {
         </Card>
       </motion.div>
 
+      {/* Settings */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+        <Card className="border-green-200 dark:border-gray-700">
+          <CardHeader>
+            <CardTitle className="dark:text-gray-200">Preferências</CardTitle>
+            <CardDescription className="dark:text-gray-400">Personaliza a tua experiência</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                {isDarkMode ? <Moon size={20} className="text-indigo-400" /> : <Sun size={20} className="text-amber-500" />}
+                <div>
+                  <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">
+                    {isDarkMode ? 'Modo Escuro' : 'Modo Claro'}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Alterna entre tema claro e escuro</p>
+                </div>
+              </div>
+              {toggleTheme && (
+                <button
+                  onClick={toggleTheme}
+                  className={`relative w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none ${
+                    isDarkMode ? 'bg-green-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${
+                    isDarkMode ? 'translate-x-6' : 'translate-x-0'
+                  }`} />
+                </button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* Logout */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.5 }}
       >
         <Card className="border-red-200 dark:border-red-900/50">
           <CardContent className="p-6">
