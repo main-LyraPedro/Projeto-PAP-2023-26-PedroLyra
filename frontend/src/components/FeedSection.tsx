@@ -1,37 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, MessageCircle, Send, Plus, X, Leaf, Image } from 'lucide-react';
-import { Card, CardContent } from './ui/card';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Avatar, AvatarFallback } from './ui/avatar';
-import { Badge } from './ui/badge';
+import { Heart, MessageCircle, Send, X, Leaf, Image, Trophy, Zap, Flame } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Post {
-  id: number;
-  descricao: string;
-  categoria: string;
-  imagem_url: string | null;
-  criada_em: string;
+  id: number; descricao: string; categoria: string;
+  imagem_url: string | null; criada_em: string;
   usuario: { id: number; nome: string };
-  likes: number;
-  comentarios: number;
-  user_liked: boolean;
+  likes: number; comentarios: number; user_liked: boolean;
 }
-
 interface Comentario {
-  id: number;
-  texto: string;
-  criada_em: string;
+  id: number; texto: string; criada_em: string;
   usuario: { id: number; nome: string };
 }
+interface FeedSectionProps { userId: number; }
 
-interface FeedSectionProps {
-  userId: number;
-}
-
-const CATEGORIAS = [
+const CATS = [
   { id: 'geral', label: 'Geral', emoji: '🌍' },
   { id: 'reciclagem', label: 'Reciclagem', emoji: '♻️' },
   { id: 'agua', label: 'Água', emoji: '💧' },
@@ -40,450 +24,370 @@ const CATEGORIAS = [
   { id: 'alimentacao', label: 'Alimentação', emoji: '🥗' },
 ];
 
-function tempoRelativo(dataStr: string): string {
-  const agora = new Date();
-  const data = new Date(dataStr);
-  const diff = Math.floor((agora.getTime() - data.getTime()) / 1000);
-  if (diff < 60) return 'agora mesmo';
-  if (diff < 3600) return `há ${Math.floor(diff / 60)} min`;
-  if (diff < 86400) return `há ${Math.floor(diff / 3600)}h`;
-  return `há ${Math.floor(diff / 86400)} dias`;
+const catColor: Record<string, string> = {
+  geral: '#10b981', reciclagem: '#06b6d4', agua: '#3b82f6',
+  energia: '#f59e0b', transporte: '#8b5cf6', alimentacao: '#ec4899',
+};
+
+function ago(s: string) {
+  const d = Math.floor((Date.now() - new Date(s).getTime()) / 1000);
+  if (d < 60) return 'agora mesmo';
+  if (d < 3600) return `há ${Math.floor(d / 60)}min`;
+  if (d < 86400) return `há ${Math.floor(d / 3600)}h`;
+  return `há ${Math.floor(d / 86400)}d`;
 }
+
+function initials(name: string) {
+  return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+}
+
+const C = { // dark card style
+  card: { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 18, overflow: 'hidden' as const },
+  avatar: (color: string) => ({ width: 40, height: 40, borderRadius: 12, background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: '#fff', flexShrink: 0 }),
+};
 
 function PostCard({ post, userId, onLike }: { post: Post; userId: number; onLike: (id: number) => void }) {
-  const [showComments, setShowComments] = useState(false);
-  const [comentarios, setComentarios] = useState<Comentario[]>([]);
-  const [novoComentario, setNovoComentario] = useState('');
-  const [loadingComments, setLoadingComments] = useState(false);
+  const [showC, setShowC] = useState(false);
+  const [coms, setComs] = useState<Comentario[]>([]);
+  const [text, setText] = useState('');
+  const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [liked, setLiked] = useState(post.user_liked);
+  const [likeCount, setLikeCount] = useState(post.likes);
+  const cat = CATS.find(c => c.id === post.categoria) || CATS[0];
+  const color = catColor[post.categoria] || '#10b981';
 
-  const cat = CATEGORIAS.find(c => c.id === post.categoria) || CATEGORIAS[0];
-  const iniciais = post.usuario.nome.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
-
-  const carregarComentarios = async () => {
-    if (loadingComments) return;
-    setLoadingComments(true);
+  const loadComs = async () => {
+    setLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:5000/api/posts/${post.id}/comments`);
-      const data = await res.json();
-      if (res.ok) setComentarios(data);
-    } catch (err) {
-      console.error('Erro ao carregar comentários:', err);
-    } finally {
-      setLoadingComments(false);
-    }
+      const r = await fetch(`http://127.0.0.1:5000/api/posts/${post.id}/comments`);
+      const d = await r.json();
+      if (r.ok) setComs(d);
+    } finally { setLoading(false); }
   };
 
-  const toggleComments = () => {
-    if (!showComments) carregarComentarios();
-    setShowComments(!showComments);
-  };
-
-  const enviarComentario = async () => {
-    if (!novoComentario.trim()) return;
+  const sendCom = async () => {
+    if (!text.trim()) return;
     setSending(true);
     try {
-      const res = await fetch(`http://127.0.0.1:5000/api/posts/${post.id}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, texto: novoComentario })
+      const r = await fetch(`http://127.0.0.1:5000/api/posts/${post.id}/comments`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, texto: text }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        setComentarios(prev => [...prev, data.comentario]);
-        setNovoComentario('');
-      } else {
-        toast.error('Erro ao comentar');
-      }
-    } catch {
-      toast.error('Erro ao conectar ao servidor');
-    } finally {
-      setSending(false);
-    }
+      const d = await r.json();
+      if (r.ok) { setComs(p => [...p, d.comentario]); setText(''); }
+    } finally { setSending(false); }
+  };
+
+  const doLike = () => {
+    setLiked(l => !l);
+    setLikeCount(n => liked ? n - 1 : n + 1);
+    onLike(post.id);
   };
 
   return (
-    <Card className="border-green-200 dark:border-gray-700 overflow-hidden">
-      <CardContent className="p-0">
-        {/* Header */}
-        <div className="flex items-center gap-3 p-4">
-          <Avatar className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-600">
-            <AvatarFallback className="text-white text-sm font-bold">{iniciais}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <div className="font-semibold text-gray-800 dark:text-gray-200">{post.usuario.nome}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">{tempoRelativo(post.criada_em)}</div>
-          </div>
-          <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-0 text-xs">
-            {cat.emoji} {cat.label}
-          </Badge>
-        </div>
-
-        {/* Image */}
-        {post.imagem_url && (
-          <div className="w-full max-h-80 overflow-hidden bg-gray-100 dark:bg-gray-800">
-            <img
-              src={`http://127.0.0.1:5000${post.imagem_url}`}
-              alt="Publicação ecológica"
-              className="w-full object-cover"
-            />
-          </div>
-        )}
-
-        {/* Description */}
-        <div className="px-4 py-3">
-          <p className="text-gray-800 dark:text-gray-200">{post.descricao}</p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-4 px-4 pb-3 border-t border-gray-100 dark:border-gray-700 pt-3">
-          <button
-            onClick={() => onLike(post.id)}
-            className={`flex items-center gap-1.5 transition-all ${
-              post.user_liked ? 'text-red-500' : 'text-gray-500 dark:text-gray-400 hover:text-red-500'
-            }`}
-          >
-            <Heart size={20} className={post.user_liked ? 'fill-red-500' : ''} />
-            <span className="text-sm">{post.likes}</span>
-          </button>
-          <button
-            onClick={toggleComments}
-            className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-green-600 transition-all"
-          >
-            <MessageCircle size={20} />
-            <span className="text-sm">{post.comentarios}</span>
-          </button>
-        </div>
-
-        {/* Comments */}
-        <AnimatePresence>
-          {showComments && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="border-t border-gray-100 dark:border-gray-700 overflow-hidden"
-            >
-              <div className="p-4 space-y-3">
-                {loadingComments ? (
-                  <div className="flex justify-center py-2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
-                  </div>
-                ) : comentarios.length === 0 ? (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-1">Nenhum comentário ainda. Sê o primeiro!</p>
-                ) : (
-                  comentarios.map(c => (
-                    <div key={c.id} className="flex gap-2">
-                      <Avatar className="w-7 h-7 bg-gradient-to-br from-green-400 to-emerald-600 flex-shrink-0">
-                        <AvatarFallback className="text-white text-xs">
-                          {c.usuario.nome.slice(0, 1).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg px-3 py-2 flex-1">
-                        <span className="font-semibold text-sm text-gray-800 dark:text-gray-200 mr-2">{c.usuario.nome}</span>
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{c.texto}</span>
-                      </div>
-                    </div>
-                  ))
-                )}
-                <div className="flex gap-2 mt-2">
-                  <Input
-                    placeholder="Adicionar um comentário..."
-                    value={novoComentario}
-                    onChange={(e) => setNovoComentario(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && enviarComentario()}
-                    className="dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
-                  />
-                  <Button
-                    size="sm"
-                    onClick={enviarComentario}
-                    disabled={sending || !novoComentario.trim()}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <Send size={16} />
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </CardContent>
-    </Card>
-  );
-}
-
-export function FeedSection({ userId }: FeedSectionProps) {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [filtro, setFiltro] = useState<string>('todos');
-  const [isLoading, setIsLoading] = useState(true);
-  const [showCreatePost, setShowCreatePost] = useState(false);
-  const [descricao, setDescricao] = useState('');
-  const [categoria, setCategoria] = useState('geral');
-  const [imagem, setImagem] = useState<File | null>(null);
-  const [imagemPreview, setImagemPreview] = useState<string | null>(null);
-  const [posting, setPosting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const carregarFeed = async () => {
-    try {
-      const res = await fetch(`http://127.0.0.1:5000/api/feed/${userId}`);
-      const data = await res.json();
-      if (res.ok) setPosts(data);
-    } catch (err) {
-      console.error('Erro ao carregar feed:', err);
-      toast.error('Erro ao carregar o feed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    carregarFeed();
-  }, [userId]);
-
-  const handleImagemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImagem(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setImagemPreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handlePublicar = async () => {
-    if (!descricao.trim()) {
-      toast.error('Escreve uma descrição para a tua publicação!');
-      return;
-    }
-    setPosting(true);
-    try {
-      const formData = new FormData();
-      formData.append('user_id', String(userId));
-      formData.append('descricao', descricao);
-      formData.append('categoria', categoria);
-      if (imagem) formData.append('imagem', imagem);
-
-      const res = await fetch('http://127.0.0.1:5000/api/posts', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success('Publicação criada! +5 pontos 🌱');
-        setPosts(prev => [data.post, ...prev]);
-        setDescricao('');
-        setCategoria('geral');
-        setImagem(null);
-        setImagemPreview(null);
-        setShowCreatePost(false);
-      } else {
-        toast.error(data.erro || 'Erro ao criar publicação');
-      }
-    } catch {
-      toast.error('Erro ao conectar ao servidor');
-    } finally {
-      setPosting(false);
-    }
-  };
-
-  const handleLike = async (postId: number) => {
-    try {
-      const res = await fetch(`http://127.0.0.1:5000/api/posts/${postId}/like`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setPosts(prev => prev.map(p =>
-          p.id === postId
-            ? { ...p, likes: data.likes, user_liked: data.acao === 'adicionado' }
-            : p
-        ));
-      }
-    } catch (err) {
-      console.error('Erro ao dar like:', err);
-    }
-  };
-
-  const postsFiltrados = filtro === 'todos'
-    ? posts
-    : posts.filter(p => p.categoria === filtro);
-
-  return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <motion.div style={C.card} whileHover={{ y: -3, boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }} transition={{ duration: 0.2 }}>
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-green-800 dark:text-green-300">Feed Ecológico</h1>
-            <p className="text-gray-600 dark:text-gray-400">Partilha as tuas ações sustentáveis</p>
-          </div>
-          <Button
-            onClick={() => setShowCreatePost(!showCreatePost)}
-            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
-          >
-            {showCreatePost ? <X size={20} /> : <Plus size={20} />}
-            <span className="ml-2 hidden sm:inline">{showCreatePost ? 'Cancelar' : 'Publicar'}</span>
-          </Button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px 12px' }}>
+        <div style={C.avatar(`linear-gradient(135deg,${color},${color}99)`)}>
+          {initials(post.usuario.nome)}
         </div>
-
-        {/* Filtros por categoria */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setFiltro('todos')}
-            className={`px-3 py-1 rounded-full text-sm border transition-all ${
-              filtro === 'todos'
-                ? 'bg-green-600 text-white border-green-600'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-green-400'
-            }`}
-          >
-            🌍 Todos
-          </button>
-          {CATEGORIAS.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => setFiltro(cat.id)}
-              className={`px-3 py-1 rounded-full text-sm border transition-all ${
-                filtro === cat.id
-                  ? 'bg-green-600 text-white border-green-600'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-green-400'
-              }`}
-            >
-              {cat.emoji} {cat.label}
-            </button>
-          ))}
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{post.usuario.nome}</p>
+          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{ago(post.criada_em)}</p>
         </div>
-      </motion.div>
+        <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: `${color}18`, border: `1px solid ${color}35`, color }}>
+          {cat.emoji} {cat.label}
+        </span>
+      </div>
 
-      {/* Create Post */}
+      {/* Image */}
+      {post.imagem_url && (
+        <div style={{ overflow: 'hidden', maxHeight: 300 }}>
+          <img src={`http://127.0.0.1:5000${post.imagem_url}`} alt="" style={{ width: '100%', objectFit: 'cover', display: 'block' }} />
+        </div>
+      )}
+
+      {/* Text */}
+      <div style={{ padding: '14px 20px 12px' }}>
+        <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.82)', lineHeight: 1.6 }}>{post.descricao}</p>
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '10px 20px 14px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <motion.button onClick={doLike} whileTap={{ scale: 1.3 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', background: liked ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.04)', color: liked ? '#ef4444' : 'rgba(255,255,255,0.4)', transition: 'all 0.2s' }}>
+          <Heart size={16} style={{ fill: liked ? '#ef4444' : 'none' }} />
+          <span style={{ fontSize: 13, fontWeight: 600 }}>{likeCount}</span>
+        </motion.button>
+        <button onClick={() => { if (!showC) loadComs(); setShowC(s => !s); }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', background: showC ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.04)', color: showC ? '#10b981' : 'rgba(255,255,255,0.4)', transition: 'all 0.2s' }}>
+          <MessageCircle size={16} />
+          <span style={{ fontSize: 13, fontWeight: 600 }}>{post.comentarios}</span>
+        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 10, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.15)' }}>
+          <Leaf size={12} style={{ color: '#10b981' }} />
+          <span style={{ fontSize: 11, color: '#10b981', fontWeight: 700 }}>+5 pts</span>
+        </div>
+      </div>
+
+      {/* Comments */}
       <AnimatePresence>
-        {showCreatePost && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-          >
-            <Card className="border-green-300 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10">
-              <CardContent className="p-5 space-y-4">
-                <h3 className="text-green-800 dark:text-green-300 flex items-center gap-2 text-base font-semibold">
-                  <Leaf size={18} /> Nova Publicação
-                </h3>
-
-                {/* Categoria */}
-                <div className="flex flex-wrap gap-2">
-                  {CATEGORIAS.map(cat => (
-                    <button
-                      key={cat.id}
-                      onClick={() => setCategoria(cat.id)}
-                      className={`px-3 py-1 rounded-full text-sm border transition-all ${
-                        categoria === cat.id
-                          ? 'bg-green-600 text-white border-green-600'
-                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-green-400'
-                      }`}
-                    >
-                      {cat.emoji} {cat.label}
-                    </button>
-                  ))}
+        {showC && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            style={{ borderTop: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: 12 }}>
+                  <div style={{ width: 20, height: 20, border: '2px solid rgba(16,185,129,0.3)', borderTopColor: '#10b981', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
                 </div>
-
-                {/* Textarea */}
-                <textarea
-                  placeholder="Descreve a tua ação sustentável de hoje... 🌱"
-                  value={descricao}
-                  onChange={(e) => setDescricao(e.target.value)}
-                  rows={3}
-                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
-
-                {/* Preview da imagem */}
-                {imagemPreview && (
-                  <div className="relative">
-                    <img src={imagemPreview} alt="Preview" className="w-full rounded-lg max-h-48 object-cover" />
-                    <button
-                      onClick={() => { setImagem(null); setImagemPreview(null); }}
-                      className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
-                    >
-                      <X size={16} />
-                    </button>
+              ) : coms.length === 0 ? (
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '8px 0' }}>Sê o primeiro a comentar!</p>
+              ) : coms.map(c => (
+                <div key={c.id} style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ ...C.avatar('linear-gradient(135deg,#10b981,#059669)'), width: 30, height: 30, fontSize: 11, borderRadius: 8, flexShrink: 0 }}>
+                    {c.usuario.nome[0].toUpperCase()}
                   </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-green-600 transition-all"
-                  >
-                    <Image size={20} />
-                    <span className="text-sm">Adicionar foto</span>
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImagemChange}
-                    className="hidden"
-                  />
-                  <Button
-                    onClick={handlePublicar}
-                    disabled={posting || !descricao.trim()}
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
-                  >
-                    {posting
-                      ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                      : <Send size={16} className="mr-2" />
-                    }
-                    {posting ? 'A publicar...' : 'Publicar'}
-                  </Button>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: '8px 12px', flex: 1 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', marginRight: 8 }}>{c.usuario.nome}</span>
+                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)' }}>{c.texto}</span>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              ))}
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendCom()}
+                  placeholder="Adicionar comentário..." style={{ flex: 1, padding: '9px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 13, outline: 'none' }} />
+                <button onClick={sendCom} disabled={sending || !text.trim()}
+                  style={{ padding: '9px 16px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', cursor: 'pointer', opacity: sending || !text.trim() ? 0.5 : 1 }}>
+                  <Send size={15} />
+                </button>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
+    </motion.div>
+  );
+}
 
-      {/* Feed */}
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+/* ── Right Panel ────────────────────────────────────────────── */
+function RightPanel() {
+  const tips = ['Usa sacos reutilizáveis nas compras.', 'Reduz o consumo de carne 2x/semana.', 'Fecha a torneira ao escovar os dentes.'];
+  const tip = tips[new Date().getDay() % tips.length];
+  const top5 = [
+    { name: 'Ana Silva', pts: 980, emoji: '🥇' },
+    { name: 'João Costa', pts: 860, emoji: '🥈' },
+    { name: 'Maria Lopes', pts: 720, emoji: '🥉' },
+    { name: 'Rui Santos', pts: 610, emoji: '4️⃣' },
+    { name: 'Sofia Neves', pts: 540, emoji: '5️⃣' },
+  ];
+  const block = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '18px 20px', marginBottom: 14 };
+
+  return (
+    <div style={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 0 }}>
+      {/* Missão do dia */}
+      <div style={block}>
+        <p style={{ fontSize: 10, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700, marginBottom: 10 }}>Missão do Dia</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>♻️</div>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Recicla 3 itens hoje</p>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>+30 pontos</p>
+          </div>
         </div>
-      ) : postsFiltrados.length === 0 ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <Card className="border-green-200 dark:border-gray-700">
-            <CardContent className="p-12 text-center">
-              <div className="text-6xl mb-4">{filtro === 'todos' ? '🌱' : CATEGORIAS.find(c => c.id === filtro)?.emoji ?? '🌿'}</div>
-              <h3 className="text-green-800 dark:text-green-300 mb-2">
-                {filtro === 'todos' ? 'Nenhuma publicação ainda' : `Sem publicações de ${CATEGORIAS.find(c => c.id === filtro)?.label}`}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                {filtro === 'todos' ? 'Sê o primeiro! Partilha a tua primeira ação sustentável.' : 'Sê o primeiro a publicar nesta categoria!'}
-              </p>
-              <Button
-                onClick={() => setShowCreatePost(true)}
-                className="bg-gradient-to-r from-green-500 to-emerald-600 text-white"
-              >
-                <Plus size={20} className="mr-2" />
-                Criar publicação
-              </Button>
-            </CardContent>
-          </Card>
+        <div style={{ marginTop: 12, height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: '33%', background: 'linear-gradient(90deg,#10b981,#34d399)', borderRadius: 10 }} />
+        </div>
+        <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 5 }}>1 de 3 completo</p>
+      </div>
+
+      {/* Streak + Nível */}
+      <div style={{ ...block, display: 'flex', gap: 10 }}>
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <Flame size={22} style={{ color: '#f97316', margin: '0 auto 6px' }} />
+          <p style={{ fontSize: 22, fontWeight: 900, color: '#fff' }}>5</p>
+          <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Streak</p>
+        </div>
+        <div style={{ width: 1, background: 'rgba(255,255,255,0.07)' }} />
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <Zap size={22} style={{ color: '#10b981', margin: '0 auto 6px' }} />
+          <p style={{ fontSize: 22, fontWeight: 900, color: '#fff' }}>120</p>
+          <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Pontos</p>
+        </div>
+      </div>
+
+      {/* Ranking */}
+      <div style={block}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <Trophy size={15} style={{ color: '#f59e0b' }} />
+          <p style={{ fontSize: 10, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700 }}>Top Comunidade</p>
+        </div>
+        {top5.map((u, i) => (
+          <div key={u.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: i < 4 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+            <span style={{ fontSize: 14 }}>{u.emoji}</span>
+            <p style={{ flex: 1, fontSize: 13, fontWeight: 600, color: i === 0 ? '#fbbf24' : 'rgba(255,255,255,0.75)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: '#10b981' }}>{u.pts}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Dica */}
+      <div style={{ ...block, background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)' }}>
+        <p style={{ fontSize: 10, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700, marginBottom: 8 }}>💡 Dica do Dia</p>
+        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>{tip}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ── Main Feed ──────────────────────────────────────────────── */
+export function FeedSection({ userId }: FeedSectionProps) {
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [filtro, setFiltro] = useState('todos');
+  const [loading, setLoading] = useState(true);
+  const [desc, setDesc] = useState('');
+  const [cat, setCat] = useState('geral');
+  const [img, setImg] = useState<File | null>(null);
+  const [imgPrev, setImgPrev] = useState<string | null>(null);
+  const [posting, setPosting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const loadFeed = async () => {
+    try {
+      const r = await fetch(`http://127.0.0.1:5000/api/feed/${userId}`);
+      const d = await r.json();
+      if (r.ok) setPosts(d);
+    } catch { toast.error('Erro ao carregar feed'); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { loadFeed(); }, [userId]);
+
+  const handleImg = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) { setImg(f); const r = new FileReader(); r.onloadend = () => setImgPrev(r.result as string); r.readAsDataURL(f); }
+  };
+
+  const publish = async () => {
+    if (!desc.trim()) { toast.error('Escreve uma descrição!'); return; }
+    setPosting(true);
+    try {
+      const fd = new FormData();
+      fd.append('user_id', String(userId)); fd.append('descricao', desc); fd.append('categoria', cat);
+      if (img) fd.append('imagem', img);
+      const r = await fetch('http://127.0.0.1:5000/api/posts', { method: 'POST', body: fd });
+      const d = await r.json();
+      if (r.ok) {
+        toast.success('Publicação criada! +5 pontos 🌱');
+        setPosts(p => [d.post, ...p]); setDesc(''); setCat('geral'); setImg(null); setImgPrev(null);
+      } else { toast.error(d.erro || 'Erro ao criar publicação'); }
+    } catch { toast.error('Erro de ligação'); } finally { setPosting(false); }
+  };
+
+  const doLike = async (id: number) => {
+    try {
+      const r = await fetch(`http://127.0.0.1:5000/api/posts/${id}/like`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId }),
+      });
+      const d = await r.json();
+      if (r.ok) setPosts(p => p.map(x => x.id === id ? { ...x, likes: d.likes, user_liked: d.acao === 'adicionado' } : x));
+    } catch { /* silent */ }
+  };
+
+  const filtered = filtro === 'todos' ? posts : posts.filter(p => p.categoria === filtro);
+
+  const font = { fontFamily: '"Inter","Segoe UI",system-ui,sans-serif' };
+  const inputStyle = { width: '100%', padding: '12px 16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 14, outline: 'none', resize: 'none' as const };
+
+  return (
+    <div style={{ ...font, display: 'flex', gap: 24, alignItems: 'flex-start', paddingBottom: 40 }}>
+      {/* ── CENTER FEED ── */}
+      <div style={{ flex: 1, minWidth: 0, maxWidth: 640 }}>
+
+        {/* Create post card */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 18, padding: 20, marginBottom: 20 }}>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg,#10b981,#059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+              EC
+            </div>
+            <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2} placeholder="O que fizeste hoje pelo planeta? 🌱"
+              style={inputStyle} />
+          </div>
+
+          {/* Category chips */}
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, marginBottom: 14 }}>
+            {CATS.map(c => (
+              <button key={c.id} onClick={() => setCat(c.id)}
+                style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${cat === c.id ? catColor[c.id] : 'rgba(255,255,255,0.1)'}`, background: cat === c.id ? `${catColor[c.id]}18` : 'transparent', color: cat === c.id ? catColor[c.id] : 'rgba(255,255,255,0.4)', transition: 'all 0.2s' }}>
+                {c.emoji} {c.label}
+              </button>
+            ))}
+          </div>
+
+          {imgPrev && (
+            <div style={{ position: 'relative', marginBottom: 14 }}>
+              <img src={imgPrev} alt="" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 10 }} />
+              <button onClick={() => { setImg(null); setImgPrev(null); }}
+                style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button onClick={() => fileRef.current?.click()}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.45)', fontSize: 13, cursor: 'pointer' }}>
+              <Image size={15} /> Foto
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" onChange={handleImg} style={{ display: 'none' }} />
+            <motion.button onClick={publish} disabled={posting || !desc.trim()} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+              style={{ marginLeft: 'auto', padding: '9px 22px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: posting || !desc.trim() ? 0.55 : 1, display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 0 20px rgba(16,185,129,0.3)' }}>
+              <Leaf size={15} />
+              {posting ? 'A publicar…' : 'Publicar'}
+            </motion.button>
+          </div>
         </motion.div>
-      ) : (
-        <div className="space-y-4">
-          {postsFiltrados.map((post, index) => (
-            <motion.div
-              key={post.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <PostCard post={post} userId={userId} onLike={handleLike} />
-            </motion.div>
+
+        {/* Filters */}
+        <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, marginBottom: 20 }}>
+          {[{ id: 'todos', label: '🌍 Todos' }, ...CATS.map(c => ({ id: c.id, label: `${c.emoji} ${c.label}` }))].map(f => (
+            <button key={f.id} onClick={() => setFiltro(f.id)}
+              style={{ padding: '5px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${filtro === f.id ? '#10b981' : 'rgba(255,255,255,0.1)'}`, background: filtro === f.id ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.03)', color: filtro === f.id ? '#10b981' : 'rgba(255,255,255,0.5)', transition: 'all 0.2s' }}>
+              {f.label}
+            </button>
           ))}
         </div>
-      )}
+
+        {/* Posts */}
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
+            <div style={{ width: 36, height: 36, border: '3px solid rgba(16,185,129,0.2)', borderTopColor: '#10b981', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: 18, border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: 56, marginBottom: 16 }}>🌱</div>
+            <p style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Nenhuma publicação ainda</p>
+            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)' }}>Sê o primeiro a partilhar uma ação sustentável!</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {filtered.map((post, i) => (
+              <motion.div key={post.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                <PostCard post={post} userId={userId} onLike={doLike} />
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── RIGHT PANEL ── */}
+      <div className="hidden xl:block">
+        <RightPanel />
+      </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
