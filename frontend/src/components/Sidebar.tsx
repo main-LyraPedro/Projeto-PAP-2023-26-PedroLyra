@@ -1,8 +1,9 @@
 import { motion } from 'motion/react';
-import { MessageCircle, Trophy, CheckSquare, Users, User, Leaf, Newspaper, LogOut, Sun, Moon } from 'lucide-react';
+import { MessageCircle, Trophy, CheckSquare, Users, User, Leaf, Newspaper, LogOut, Sun, Moon, MessageSquareDot } from 'lucide-react';
 import { theme } from '../theme';
 
-type Section = 'chat' | 'feed' | 'ranking' | 'tasks' | 'friends' | 'profile';
+// Incluir 'private' no tipo Section
+type Section = 'chat' | 'feed' | 'ranking' | 'tasks' | 'friends' | 'profile' | 'private';
 
 interface SidebarProps {
   activeSection: Section;
@@ -14,12 +15,13 @@ interface SidebarProps {
 }
 
 const MENU = [
-  { id: 'feed' as Section,    icon: Newspaper,     label: 'Feed'    },
-  { id: 'chat' as Section,    icon: MessageCircle, label: 'EcoBot'  },
-  { id: 'ranking' as Section, icon: Trophy,        label: 'Ranking' },
-  { id: 'tasks' as Section,   icon: CheckSquare,   label: 'Missões' },
-  { id: 'friends' as Section, icon: Users,         label: 'Amigos'  },
-  { id: 'profile' as Section, icon: User,          label: 'Perfil'  },
+  { id: 'feed' as Section,    icon: Newspaper,        label: 'Feed'      },
+  { id: 'chat' as Section,    icon: MessageCircle,    label: 'EcoBot'    },
+  { id: 'private' as Section, icon: MessageSquareDot, label: 'Mensagens' },
+  { id: 'ranking' as Section, icon: Trophy,           label: 'Ranking'   },
+  { id: 'tasks' as Section,   icon: CheckSquare,      label: 'Missões'   },
+  { id: 'friends' as Section, icon: Users,            label: 'Amigos'    },
+  { id: 'profile' as Section, icon: User,             label: 'Perfil'    },
 ];
 
 export function Sidebar({ activeSection, setActiveSection, onLogout, userName, isDarkMode, toggleTheme }: SidebarProps) {

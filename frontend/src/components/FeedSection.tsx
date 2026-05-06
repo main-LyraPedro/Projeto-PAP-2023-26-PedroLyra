@@ -50,7 +50,7 @@ function PostCard({ post, userId, onLike, isDarkMode }: { post: Post; userId: nu
 
   const loadComs = async () => {
     setLoading(true);
-    try { const r = await fetch(`http://127.0.0.1:5000/api/posts/${post.id}/comments`); if (r.ok) setComs(await r.json()); }
+    try { const r = await fetch(`http://localhost:5000/api/posts/${post.id}/comments`); if (r.ok) setComs(await r.json()); }
     finally { setLoading(false); }
   };
 
@@ -58,7 +58,7 @@ function PostCard({ post, userId, onLike, isDarkMode }: { post: Post; userId: nu
     if (!text.trim()) return;
     setSending(true);
     try {
-      const r = await fetch(`http://127.0.0.1:5000/api/posts/${post.id}/comments`, {
+      const r = await fetch(`http://localhost:5000/api/posts/${post.id}/comments`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId, texto: text }),
       });
@@ -88,7 +88,7 @@ function PostCard({ post, userId, onLike, isDarkMode }: { post: Post; userId: nu
 
       {post.imagem_url && (
         <div style={{ overflow: 'hidden', maxHeight: 300 }}>
-          <img src={`http://127.0.0.1:5000${post.imagem_url}`} alt="" style={{ width: '100%', objectFit: 'cover', display: 'block' }} />
+          <img src={`http://localhost:5000${post.imagem_url}`} alt="" style={{ width: '100%', objectFit: 'cover', display: 'block' }} />
         </div>
       )}
 
@@ -230,7 +230,7 @@ export function FeedSection({ userId, isDarkMode }: FeedSectionProps) {
 
   const loadFeed = async () => {
     try {
-      const r = await fetch(`http://127.0.0.1:5000/api/feed/${userId}`);
+      const r = await fetch(`http://localhost:5000/api/feed/${userId}`);
       if (r.ok) setPosts(await r.json());
     } catch { toast.error('Erro ao carregar feed'); }
     finally { setLoading(false); }
@@ -250,7 +250,7 @@ export function FeedSection({ userId, isDarkMode }: FeedSectionProps) {
       const fd = new FormData();
       fd.append('user_id', String(userId)); fd.append('descricao', desc); fd.append('categoria', cat);
       if (img) fd.append('imagem', img);
-      const r = await fetch('http://127.0.0.1:5000/api/posts', { method: 'POST', body: fd });
+      const r = await fetch('http://localhost:5000/api/posts', { method: 'POST', body: fd });
       const d = await r.json();
       if (r.ok) { toast.success('Publicação criada! +5 pontos 🌱'); setPosts(p => [d.post, ...p]); setDesc(''); setCat('geral'); setImg(null); setImgPrev(null); }
       else toast.error(d.erro || 'Erro ao criar publicação');
@@ -259,7 +259,7 @@ export function FeedSection({ userId, isDarkMode }: FeedSectionProps) {
 
   const doLike = async (id: number) => {
     try {
-      const r = await fetch(`http://127.0.0.1:5000/api/posts/${id}/like`, {
+      const r = await fetch(`http://localhost:5000/api/posts/${id}/like`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId }),
       });

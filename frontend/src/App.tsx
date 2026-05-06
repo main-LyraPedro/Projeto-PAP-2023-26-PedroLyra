@@ -3,6 +3,7 @@ import { LoginPage } from './components/LoginPage';
 import { ChatPage } from './components/ChatPage';
 import { LandingPage } from './components/LandingPage';
 import { Toaster } from './components/ui/sonner';
+import { socket } from './services/socket';
 
 type Page = 'landing' | 'login' | 'app';
 
@@ -27,9 +28,24 @@ export default function App() {
   const handleLogin = (userData: { user_id: number; email: string }) => {
     setUserId(userData.user_id);
     setPage('app');
+
+    // Ligar o socket DEPOIS do login — o cookie de sessão já foi guardado
+    // pelo browser com o Set-Cookie da resposta do /api/login.
+    // Pequeno delay para garantir que o browser processou o cookie.
+    setTimeout(() => {
+      if (!socket.connected) {
+        console.log('[App] A ligar socket após login...');
+        socket.connect();
+      }
+    }, 200);
   };
 
   const handleLogout = () => {
+    // Desligar socket antes de limpar sessão
+    if (socket.connected) {
+      socket.disconnect();
+      console.log('[App] Socket desligado no logout');
+    }
     setPage('landing');
     setUserId(null);
     localStorage.removeItem('user_id');

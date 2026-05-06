@@ -7,3 +7,6 @@ requests==2.31.0
 pillow==12.1.1
 qrcode==7.4.2
 beautifulsoup4==4.12.3
+flask-socketio==5.4.1
+python-socketio==5.11.4
+simple-websocket==1.1.0

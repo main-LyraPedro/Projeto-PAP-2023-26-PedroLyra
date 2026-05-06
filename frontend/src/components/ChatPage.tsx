@@ -6,6 +6,7 @@ import { RankingSection } from './RankingSection';
 import { TasksSection } from './TasksSection';
 import { FriendsSection } from './FriendsSection';
 import { ProfileSection } from './ProfileSection';
+import { PrivateChatSection } from './PrivateChatSection';
 import { Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { theme } from '../theme';
@@ -17,12 +18,15 @@ interface ChatPageProps {
   userId: number;
 }
 
-type Section = 'chat' | 'feed' | 'ranking' | 'tasks' | 'friends' | 'profile';
+// Adicionar 'private' ao tipo Section
+type Section = 'chat' | 'feed' | 'ranking' | 'tasks' | 'friends' | 'profile' | 'private';
 
 export function ChatPage({ onLogout, isDarkMode, toggleTheme, userId }: ChatPageProps) {
   const [activeSection, setActiveSection] = useState<Section>('feed');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userName, setUserName] = useState('');
+  const [privateChatFriendId, setPrivateChatFriendId] = useState<number | null>(null);
+  const [privateChatFriendName, setPrivateChatFriendName] = useState<string>('');
   const T = theme(isDarkMode);
 
   useEffect(() => {
@@ -30,10 +34,23 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme, userId }: ChatPage
     setUserName(name);
   }, []);
 
+  // Abrir chat privado a partir do botão na tela de Amigos
+  const handleOpenChat = (friendId: number, friendName: string) => {
+    setPrivateChatFriendId(friendId);
+    setPrivateChatFriendName(friendName);
+    setActiveSection('private');
+    setIsMobileMenuOpen(false);
+  };
+
   // Close mobile menu on section change
   const handleSetSection = (s: Section) => {
     setActiveSection(s);
     setIsMobileMenuOpen(false);
+    // Limpar amigo pré-seleccionado ao navegar manualmente para Mensagens
+    if (s === 'private' && s !== activeSection) {
+      setPrivateChatFriendId(null);
+      setPrivateChatFriendName('');
+    }
   };
 
   const renderSection = () => {
@@ -43,9 +60,29 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme, userId }: ChatPage
       case 'feed':    return <FeedSection userId={userId} {...commonProps} />;
       case 'ranking': return <RankingSection userId={userId} />;
       case 'tasks':   return <TasksSection userId={userId} />;
-      case 'friends': return <FriendsSection userId={userId} />;
-      case 'profile': return <ProfileSection onLogout={onLogout} userId={userId} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />;
-      default:        return <FeedSection userId={userId} {...commonProps} />;
+      case 'friends': return (
+        <FriendsSection
+          userId={userId}
+          onOpenChat={handleOpenChat}
+        />
+      );
+      case 'profile': return (
+        <ProfileSection
+          onLogout={onLogout}
+          userId={userId}
+          isDarkMode={isDarkMode}
+          toggleTheme={toggleTheme}
+        />
+      );
+      case 'private': return (
+        <PrivateChatSection
+          userId={userId}
+          isDarkMode={isDarkMode}
+          initialFriendId={privateChatFriendId}
+          initialFriendName={privateChatFriendName}
+        />
+      );
+      default: return <FeedSection userId={userId} {...commonProps} />;
     }
   };
 
@@ -102,13 +139,15 @@ export function ChatPage({ onLogout, isDarkMode, toggleTheme, userId }: ChatPage
       </AnimatePresence>
 
       {/* Main content */}
-      <div style={{ flex: 1, padding: '28px 24px', minHeight: '100vh', overflowX: 'hidden', transition: 'background 0.3s' }}>
+      <div style={{ flex: 1, padding: activeSection === 'private' ? '0' : '28px 24px', minHeight: '100vh', overflowX: 'hidden', transition: 'all 0.3s' }}>
         <motion.div
           key={activeSection}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.22 }}>
+          transition={{ duration: 0.22 }}
+          style={{ height: activeSection === 'private' ? '100vh' : 'auto' }}
+        >
           {renderSection()}
         </motion.div>
       </div>

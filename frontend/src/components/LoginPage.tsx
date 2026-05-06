@@ -61,8 +61,9 @@ export function LoginPage({ onLogin, isDarkMode, toggleTheme }: LoginPageProps) 
     try {
       if (isLogin) {
         // 🔥 LOGIN
-        const res = await fetch("http://127.0.0.1:5000/api/login", {
+        const res = await fetch("http://localhost:5000/api/login", {
           method: "POST",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: formData.email,
@@ -95,8 +96,9 @@ export function LoginPage({ onLogin, isDarkMode, toggleTheme }: LoginPageProps) 
 
       } else {
         // 🔥 REGISTRO
-        const res = await fetch("http://127.0.0.1:5000/api/register", {
+        const res = await fetch("http://localhost:5000/api/register", {
           method: "POST",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             nome: formData.name,
@@ -112,8 +114,9 @@ export function LoginPage({ onLogin, isDarkMode, toggleTheme }: LoginPageProps) 
           
           // Após criar conta, fazer login automático
           setTimeout(async () => {
-            const loginRes = await fetch("http://127.0.0.1:5000/api/login", {
+            const loginRes = await fetch("http://localhost:5000/api/login", {
               method: "POST",
+              credentials: "include",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 email: formData.email,

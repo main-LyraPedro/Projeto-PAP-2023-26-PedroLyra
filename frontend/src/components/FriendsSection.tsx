@@ -21,9 +21,10 @@ interface PendingRequest {
 
 interface FriendsSectionProps {
   userId: number;
+  onOpenChat?: (friendId: number, friendName: string) => void;
 }
 
-export function FriendsSection({ userId }: FriendsSectionProps) {
+export function FriendsSection({ userId, onOpenChat }: FriendsSectionProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [friends, setFriends] = useState<Friend[]>([]);
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
@@ -33,7 +34,7 @@ export function FriendsSection({ userId }: FriendsSectionProps) {
 
   const loadFriends = async () => {
     try {
-      const res = await fetch(`http://127.0.0.1:5000/api/friends/${userId}`);
+      const res = await fetch(`http://localhost:5000/api/friends/${userId}`);
       if (!res.ok) throw new Error("Erro");
       const data: Friend[] = await res.json();
       setFriends(data);
@@ -45,7 +46,7 @@ export function FriendsSection({ userId }: FriendsSectionProps) {
 
   const loadPending = async () => {
     try {
-      const res = await fetch(`http://127.0.0.1:5000/api/friends/pending/${userId}`);
+      const res = await fetch(`http://localhost:5000/api/friends/pending/${userId}`);
       if (!res.ok) throw new Error("Erro");
       const data: PendingRequest[] = await res.json();
       setPendingRequests(data);
@@ -75,7 +76,7 @@ export function FriendsSection({ userId }: FriendsSectionProps) {
       setIsAdding(true);
       const alvo = isNaN(Number(addValue)) ? addValue : Number(addValue);
 
-      const res = await fetch("http://127.0.0.1:5000/api/friends/add", {
+      const res = await fetch("http://localhost:5000/api/friends/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId, alvo }),
@@ -100,7 +101,7 @@ export function FriendsSection({ userId }: FriendsSectionProps) {
 
   const acceptRequest = async (friendId: number) => {
     try {
-      const res = await fetch("http://127.0.0.1:5000/api/friends/accept", {
+      const res = await fetch("http://localhost:5000/api/friends/accept", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId, friend_id: friendId }),
@@ -122,7 +123,7 @@ export function FriendsSection({ userId }: FriendsSectionProps) {
 
   const declineRequest = async (friendId: number) => {
     try {
-      const res = await fetch("http://127.0.0.1:5000/api/friends/decline", {
+      const res = await fetch("http://localhost:5000/api/friends/decline", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId, friend_id: friendId }),
@@ -146,7 +147,7 @@ export function FriendsSection({ userId }: FriendsSectionProps) {
     if (!confirm("Remover este amigo?")) return;
 
     try {
-      const res = await fetch("http://127.0.0.1:5000/api/friends/remove", {
+      const res = await fetch("http://localhost:5000/api/friends/remove", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId, friend_id: friendId }),
@@ -166,12 +167,13 @@ export function FriendsSection({ userId }: FriendsSectionProps) {
     }
   };
 
-  // 🔥 NOVA FUNÇÃO: Abrir chat com amigo
+  // Abrir chat com amigo
   const openChat = (friend: Friend) => {
-    toast.info(`Chat com ${friend.nome} - Em desenvolvimento 🚧`, {
-      description: "Esta funcionalidade estará disponível em breve!",
-      duration: 3000,
-    });
+    if (onOpenChat) {
+      onOpenChat(friend.id, friend.nome);
+    } else {
+      toast.info(`Chat com ${friend.nome} — Em desenvolvimento 🚧`);
+    }
   };
 
   const filteredFriends = friends.filter((f) =>
